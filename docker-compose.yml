@@ -34,7 +34,6 @@ depends_on:
 expose:
 - "8000"
 restart: unless-stopped
-
 frontend:
 build:
 context: ./frontend
@@ -45,6 +44,7 @@ depends_on:
 expose:
 - "3001"
 restart: unless-stopped
+
 nginx:
 image: nginx:1.27-alpine
 depends_on:
@@ -58,4 +58,3 @@ restart: unless-stopped
 
 volumes:
 badgeone_pgdata:
-babas
