@@ -58,3 +58,4 @@ restart: unless-stopped
 
 volumes:
 badgeone_pgdata:
+babas
