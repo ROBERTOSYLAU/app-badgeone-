@@ -3,7 +3,6 @@ version: "3.9"
 services:
 postgres:
 image: postgres:16
-container_name: badgeone-postgres
 environment:
 POSTGRES_DB: badgeone
 POSTGRES_USER: badgeone
@@ -16,7 +15,6 @@ restart: unless-stopped
 
 redis:
 image: redis:7
-container_name: badgeone-redis
 expose:
 - "6379"
 restart: unless-stopped
@@ -24,7 +22,6 @@ restart: unless-stopped
 backend:
 build:
 context: ./backend
-container_name: badgeone-backend
 environment:
 APP_ENV: production
 APP_NAME: "Badge One API"
@@ -37,10 +34,10 @@ depends_on:
 expose:
 - "8000"
 restart: unless-stopped
+
 frontend:
 build:
 context: ./frontend
-container_name: badgeone-frontend
 environment:
 NEXT_PUBLIC_API_BASE: /api
 depends_on:
@@ -51,4 +48,14 @@ restart: unless-stopped
 
 nginx:
 image: nginx:1.27-alpine
-container_name: badgeone-nginx
+depends_on:
+- frontend
+- backend
+expose:
+- "80"
+volumes:
+- ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+restart: unless-stopped
+
+volumes:
+badgeone_pgdata:
