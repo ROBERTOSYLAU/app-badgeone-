@@ -47,8 +47,8 @@ services:
     depends_on:
       - frontend
       - backend
-    ports:
-      - "80:80"
+    expose:
+      - "80"
     volumes:
       - ./nginx:/etc/nginx/conf.d:ro
     restart: unless-stopped
