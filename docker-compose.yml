@@ -57,4 +57,4 @@ volumes:
 restart: unless-stopped
 
 volumes:
-badgeone_pgdata:
+badgeone_pgdata
