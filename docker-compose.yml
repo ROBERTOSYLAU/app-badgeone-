@@ -27,6 +27,8 @@ services:
     depends_on:
       - postgres
       - redis
+    expose:
+      - "8000"
     restart: unless-stopped
 
   frontend:
@@ -36,9 +38,11 @@ services:
       NEXT_PUBLIC_API_BASE: "/api"
     depends_on:
       - backend
+    expose:
+      - "3000"
     restart: unless-stopped
 
-    nginx:
+  nginx:
     image: nginx:1.27-alpine
     depends_on:
       - frontend
@@ -48,3 +52,6 @@ services:
     volumes:
       - ./nginx:/etc/nginx/conf.d:ro
     restart: unless-stopped
+
+volumes:
+  badgeone_pgdata:
