@@ -16,7 +16,14 @@ type CnpjData = {
   data_inicio_atividade?: string;
   municipio?: string;
   uf?: string;
+  logradouro?: string;
+  numero?: string;
+  bairro?: string;
+  complemento?: string;
+  cep?: string;
+  natureza_juridica?: string;
   cnae_fiscal_descricao?: string;
+  cnaes_secundarios?: { codigo: number; descricao: string }[];
   suggested_name?: string;
 };
 
@@ -68,13 +75,19 @@ export default function AdminDashboard() {
     }
   }
 
+  function formatDateBr(iso?: string) {
+    if (!iso) return "-";
+    const parts = iso.split("-");
+    if (parts.length !== 3) return iso;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+
   async function createOrg(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
-    if (!orgName.trim()) return setMessage("Informe o nome da organização.");
 
     try {
-      await apiPost("/api/v1/organizations", { name: orgName, document: orgDoc || null });
+      await apiPost("/api/v1/organizations", { name: orgName || null, document: orgDoc || null });
       setOrgName("");
       setOrgDoc("");
       setCnpjData(null);
@@ -117,7 +130,7 @@ export default function AdminDashboard() {
       <section className="card">
         <h2>Criar Organização</h2>
         <form onSubmit={createOrg} className="form-grid" style={{ maxWidth: 640 }}>
-          <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Nome da organização" required />
+          <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Nome da organização (opcional se CNPJ preenchido)" />
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }}>
             <input value={orgDoc} onChange={(e) => setOrgDoc(e.target.value)} placeholder="CNPJ (opcional)" />
@@ -131,9 +144,13 @@ export default function AdminDashboard() {
               <p><strong>Razão social:</strong> {cnpjData.razao_social || "-"}</p>
               <p><strong>Nome fantasia:</strong> {cnpjData.nome_fantasia || "-"}</p>
               <p><strong>Situação:</strong> {cnpjData.descricao_situacao_cadastral || "-"}</p>
-              <p><strong>Abertura:</strong> {cnpjData.data_inicio_atividade || "-"}</p>
+              <p><strong>Abertura:</strong> {formatDateBr(cnpjData.data_inicio_atividade)}</p>
               <p><strong>Cidade/UF:</strong> {cnpjData.municipio || "-"}/{cnpjData.uf || "-"}</p>
-              <p><strong>CNAE:</strong> {cnpjData.cnae_fiscal_descricao || "-"}</p>
+              <p><strong>Endereço:</strong> {cnpjData.logradouro || "-"}, {cnpjData.numero || "s/n"} - {cnpjData.bairro || "-"} {cnpjData.complemento ? `(${cnpjData.complemento})` : ""}</p>
+              <p><strong>CEP:</strong> {cnpjData.cep || "-"}</p>
+              <p><strong>Natureza jurídica:</strong> {cnpjData.natureza_juridica || "-"}</p>
+              <p><strong>CNAE principal:</strong> {cnpjData.cnae_fiscal_descricao || "-"}</p>
+              <p><strong>CNAEs secundários:</strong> {cnpjData.cnaes_secundarios?.slice(0, 3).map((x) => x.descricao).join(" | ") || "-"}</p>
             </div>
           )}
 
@@ -169,11 +186,14 @@ export default function AdminDashboard() {
       <section className="card">
         <h2>Lotes</h2>
         <ul className="list">
-          {lots.map((l) => (
-            <li key={l.id}>
-              Lote #{l.id} | Org {l.organization_id} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
-            </li>
-          ))}
+          {lots.map((l) => {
+            const org = orgs.find((o) => o.id === l.organization_id);
+            return (
+              <li key={l.id}>
+                Lote #{l.id} | Empresa {org?.name || `#${l.organization_id}`} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
+              </li>
+            );
+          })}
         </ul>
       </section>
     </main>

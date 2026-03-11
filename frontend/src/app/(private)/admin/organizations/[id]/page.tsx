@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiGet } from "../../../../../lib/api";
+import { apiGet, apiPost } from "../../../../../lib/api";
 import { getRole, logout } from "../../../../../lib/auth";
 
 type Org = { id: number; name: string; document?: string; status: string };
@@ -17,6 +17,7 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
   const [lots, setLots] = useState<Lot[]>([]);
   const [tab, setTab] = useState<TabKey>("overview");
   const [notes, setNotes] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (getRole() !== "admin") {
@@ -36,6 +37,20 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
   const activeLots = useMemo(() => lots.filter((l) => l.status === "active"), [lots]);
   const revokedLots = useMemo(() => lots.filter((l) => l.status !== "active"), [lots]);
 
+  async function deactivateOrganization() {
+    if (!org) return;
+    const ok = window.confirm(`Confirmar desativação/exclusão da organização ${org.name}?`);
+    if (!ok) return;
+
+    try {
+      const result = await apiPost(`/api/v1/organizations/${org.id}/deactivate`, {});
+      setMessage(result.mode === "deleted" ? "Organização excluída." : "Organização desativada com sucesso.");
+      setTimeout(() => router.push("/admin"), 800);
+    } catch {
+      setMessage("Erro ao desativar organização.");
+    }
+  }
+
   return (
     <main className="container">
       <div className="header-row">
@@ -48,6 +63,8 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
 
       {!org && <p className="error">Organização não encontrada.</p>}
 
+      {message && <p className={message.includes("Erro") ? "error" : "success"}>{message}</p>}
+
       {org && (
         <>
           <section className="card">
@@ -55,6 +72,7 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
             <p><strong>ID:</strong> #{org.id}</p>
             <p><strong>CNPJ:</strong> {org.document || "não informado"}</p>
             <p><strong>Status:</strong> {org.status}</p>
+            <button className="btn-ghost" onClick={deactivateOrganization}>Excluir / Desativar organização</button>
           </section>
 
           <section className="card">
