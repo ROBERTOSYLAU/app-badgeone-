@@ -12,7 +12,7 @@ type Verify = {
   token_id: string;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
 export default function VerifyPage({ params }: { params: { id: string } }) {
   const [data, setData] = useState<Verify | null>(null);
