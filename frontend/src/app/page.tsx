@@ -10,7 +10,6 @@ export default function Home() {
 
         <ul className="list">
           <li><Link href="/login">Entrar no sistema</Link></li>
-          <li><Link href="/admin">Painel Admin</Link></li>
           <li><Link href="/issuer">Painel Emissor</Link></li>
           <li><Link href="/winner">Painel do Ganhador</Link></li>
           <li><Link href="/verify/demo-credential">Validação Pública</Link></li>

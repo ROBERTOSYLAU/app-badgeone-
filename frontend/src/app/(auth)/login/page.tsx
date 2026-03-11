@@ -57,8 +57,9 @@ export default function LoginPage() {
   return (
     <main className="centered">
       <section className="card">
-        <h1>Login Badge One</h1>
-        <p>Entrada única para Admin e Emissor.</p>
+        <h1>Entrar no sistema</h1>
+        <p>Acesso de sessão (Admin e Emissor).</p>
+        <p><a href="/">← Voltar para seleção de acesso</a></p>
         <p className="muted" style={{ fontSize: 13 }}>Dica dev: crie admin via POST /api/v1/auth/seed-admin</p>
 
         <form className="form-grid" onSubmit={onSubmit}>
