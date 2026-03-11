@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
+function apiUrl(path: string) {
+  if (API_BASE.endsWith("/api") && path.startsWith("/api/")) {
+    return `${API_BASE}${path.slice(4)}`;
+  }
+  return `${API_BASE}${path}`;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -23,7 +30,7 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+      const res = await fetch(apiUrl(`/api/v1/auth/login`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

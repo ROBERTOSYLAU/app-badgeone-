@@ -14,12 +14,19 @@ type Verify = {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
+function apiUrl(path: string) {
+  if (API_BASE.endsWith("/api") && path.startsWith("/api/")) {
+    return `${API_BASE}${path.slice(4)}`;
+  }
+  return `${API_BASE}${path}`;
+}
+
 export default function VerifyPage({ params }: { params: { id: string } }) {
   const [data, setData] = useState<Verify | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/v1/credentials/verify/${params.id}`)
+    fetch(apiUrl(`/api/v1/credentials/verify/${params.id}`))
       .then(async (r) => {
         if (!r.ok) throw new Error("not found");
         return r.json();

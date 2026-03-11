@@ -2,9 +2,16 @@ import { getToken } from "./auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
+function apiUrl(path: string) {
+  if (API_BASE.endsWith("/api") && path.startsWith("/api/")) {
+    return `${API_BASE}${path.slice(4)}`;
+  }
+  return `${API_BASE}${path}`;
+}
+
 export async function apiGet(path: string) {
   const token = getToken();
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(apiUrl(path), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     cache: "no-store",
   });
@@ -14,7 +21,7 @@ export async function apiGet(path: string) {
 
 export async function apiPost(path: string, body: unknown) {
   const token = getToken();
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(apiUrl(path), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
