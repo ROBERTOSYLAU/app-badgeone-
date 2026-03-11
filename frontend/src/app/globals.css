@@ -1,0 +1,94 @@
+:root {
+  --bg: #070f2c;
+  --bg-soft: #0f1b46;
+  --card: #111f52;
+  --line: #2a3b73;
+  --text: #f5f7ff;
+  --muted: #9fb0d0;
+  --primary: #1f71d7;
+  --primary-hover: #1960b8;
+  --danger: #ff8c8c;
+  --success: #7ff0b2;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: Inter, Arial, sans-serif;
+  background: radial-gradient(circle at top, #0f1b46 0%, #070f2c 45%, #050a1d 100%);
+  color: var(--text);
+}
+
+a { color: #8fc4ff; }
+a:hover { color: #b5daff; }
+
+.container { width: min(1100px, 92vw); margin: 24px auto 40px; }
+.centered { width: min(520px, 92vw); margin: 40px auto; }
+
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+h1 { margin: 0 0 8px; font-size: 32px; }
+h2 { margin: 0 0 12px; font-size: 20px; }
+p { margin: 0 0 12px; color: var(--muted); }
+
+input, select, button {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  padding: 11px 12px;
+  font-size: 14px;
+}
+
+input, select { background: #0a163e; color: var(--text); }
+
+button {
+  background: var(--primary);
+  color: white;
+  border: 0;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button:hover { background: var(--primary-hover); }
+button:disabled { opacity: .6; cursor: not-allowed; }
+
+.btn-ghost {
+  width: auto;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+.form-grid { display: grid; gap: 10px; }
+.list { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+.muted { color: var(--muted); }
+.error { color: var(--danger); }
+.success { color: var(--success); }
+.badge {
+  display: inline-block;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #cfe3ff;
+  background: rgba(31, 113, 215, 0.15);
+}
+
+@media (max-width: 640px) {
+  h1 { font-size: 26px; }
+  .container { width: 94vw; margin-top: 16px; }
+}

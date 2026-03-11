@@ -10,56 +10,76 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
 
-    const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (!res.ok) {
-      setError("Login inválido");
+    if (!email || !password) {
+      setError("Preencha e-mail e senha.");
       return;
     }
 
-    const data = await res.json();
-    localStorage.setItem("badgeone_token", data.access_token);
-    localStorage.setItem("badgeone_role", data.role);
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (data.role === "admin") router.push("/admin");
-    else router.push("/issuer");
+      if (!res.ok) {
+        setError("Login inválido.");
+        return;
+      }
+
+      const data = await res.json();
+      localStorage.setItem("badgeone_token", data.access_token);
+      localStorage.setItem("badgeone_role", data.role);
+
+      if (data.role === "admin") router.push("/admin");
+      else router.push("/issuer");
+    } catch {
+      setError("Falha de conexão com o servidor.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: "40px auto", padding: 24, border: "1px solid #2a3b73", borderRadius: 12 }}>
-      <h1>Login Badge One</h1>
-      <p>Entrada única para Admin e Emissor.</p>
-      <p style={{ color: "#9fb0d0", fontSize: 13 }}>Dica dev: crie admin via POST /api/v1/auth/seed-admin</p>
-      <form onSubmit={onSubmit}>
-        <label>E-mail</label>
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="seu@email.com"
-          style={{ width: "100%", padding: 12, margin: "8px 0 14px", borderRadius: 8 }}
-        />
-        <label>Senha</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          style={{ width: "100%", padding: 12, margin: "8px 0 14px", borderRadius: 8 }}
-        />
-        {error && <p style={{ color: "#ff8c8c" }}>{error}</p>}
-        <button type="submit" style={{ width: "100%", padding: 12, borderRadius: 8, background: "#1f71d7", color: "#fff", border: 0 }}>
-          Entrar
-        </button>
-      </form>
+    <main className="centered">
+      <section className="card">
+        <h1>Login Badge One</h1>
+        <p>Entrada única para Admin e Emissor.</p>
+        <p className="muted" style={{ fontSize: 13 }}>Dica dev: crie admin via POST /api/v1/auth/seed-admin</p>
+
+        <form className="form-grid" onSubmit={onSubmit}>
+          <label>E-mail</label>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seu@email.com"
+            type="email"
+            autoComplete="email"
+          />
+
+          <label>Senha</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="current-password"
+          />
+
+          {error && <p className="error">{error}</p>}
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
+          </button>
+        </form>
+      </section>
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Badge One App",
@@ -8,9 +9,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body style={{ margin: 0, fontFamily: "Inter, Arial, sans-serif", background: "#070f2c", color: "#f5f7ff" }}>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

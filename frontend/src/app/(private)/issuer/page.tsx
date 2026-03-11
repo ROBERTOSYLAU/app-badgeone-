@@ -21,6 +21,7 @@ export default function IssuerDashboard() {
   const [recipientEmail, setRecipientEmail] = useState("");
   const [courseName, setCourseName] = useState("");
   const [result, setResult] = useState<string>("");
+  const [loading, setLoading] = useState(false);
 
   async function loadData() {
     const [lotsData, orgsData, credsData] = await Promise.all([
@@ -46,6 +47,12 @@ export default function IssuerDashboard() {
     e.preventDefault();
     setResult("");
 
+    if (!organizationId || !lotId || !recipientName.trim() || !courseName.trim()) {
+      setResult("Preencha organização, lote, nome e curso.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const data = await apiPost("/api/v1/credentials/issue", {
         organization_id: Number(organizationId),
@@ -62,19 +69,21 @@ export default function IssuerDashboard() {
       await loadData();
     } catch {
       setResult("Erro ao emitir (valide lote/saldo/login).");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <main style={{ padding: 24 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <main className="container">
+      <div className="header-row">
         <h1>Emissor Dashboard</h1>
-        <button onClick={() => { logout(); router.push('/login'); }}>Sair</button>
+        <button className="btn-ghost" onClick={() => { logout(); router.push('/login'); }}>Sair</button>
       </div>
 
-      <section style={{ border: "1px solid #2b3f7a", borderRadius: 10, padding: 16, marginBottom: 18 }}>
-        <h2>Emitir Badge (Sprint 2)</h2>
-        <form onSubmit={issueCredential} style={{ display: "grid", gap: 8, maxWidth: 640 }}>
+      <section className="card">
+        <h2>Emitir Badge</h2>
+        <form onSubmit={issueCredential} className="form-grid" style={{ maxWidth: 680 }}>
           <select value={organizationId} onChange={(e) => setOrganizationId(e.target.value)} required>
             <option value="">Selecione a organização</option>
             {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
@@ -88,17 +97,17 @@ export default function IssuerDashboard() {
           </select>
 
           <input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} placeholder="Nome do ganhador" required />
-          <input value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} placeholder="Email do ganhador (opcional)" />
+          <input value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} placeholder="Email do ganhador (opcional)" type="email" />
           <input value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="Curso/Programa" required />
 
-          <button type="submit">Emitir credencial</button>
+          <button type="submit" disabled={loading}>{loading ? "Emitindo..." : "Emitir credencial"}</button>
         </form>
-        {result && <p style={{ marginTop: 10, color: "#9fd7ff" }}>{result}</p>}
+        {result && <p className={result.startsWith("Emitido") ? "success" : "error"} style={{ marginTop: 10 }}>{result}</p>}
       </section>
 
-      <section style={{ border: "1px solid #2b3f7a", borderRadius: 10, padding: 16, marginBottom: 18 }}>
+      <section className="card">
         <h2>Lotes disponíveis</h2>
-        <ul>
+        <ul className="list">
           {lots.map((l) => (
             <li key={l.id}>
               Lote #{l.id} | Org {l.organization_id} | Saldo {l.remaining}/{l.total_badges} | Janela {l.issue_window_days} dias
@@ -107,9 +116,9 @@ export default function IssuerDashboard() {
         </ul>
       </section>
 
-      <section style={{ border: "1px solid #2b3f7a", borderRadius: 10, padding: 16 }}>
+      <section className="card">
         <h2>Últimas credenciais</h2>
-        <ul>
+        <ul className="list">
           {creds.map((c) => (
             <li key={c.id}>
               {c.recipient_name} | {c.course_name} | <code>{c.public_id}</code> | <a href={`/verify/${c.public_id}`}>verificar</a>
