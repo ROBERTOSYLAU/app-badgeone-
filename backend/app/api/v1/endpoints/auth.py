@@ -51,3 +51,28 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         "role": user.role,
         "user": {"id": user.id, "email": user.email, "name": user.name},
     }
+
+
+@router.post("/reset-admin")
+def reset_admin(payload: SeedAdminRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+
+    if user:
+        user.name = payload.name
+        user.role = "admin"
+        user.password_hash = hash_password(payload.password)
+        db.commit()
+        db.refresh(user)
+        return {"ok": True, "message": "admin atualizado", "email": user.email}
+
+    user = User(
+        email=payload.email,
+        name=payload.name,
+        password_hash=hash_password(payload.password),
+        role="admin",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return {"ok": True, "message": "admin criado", "email": user.email}
