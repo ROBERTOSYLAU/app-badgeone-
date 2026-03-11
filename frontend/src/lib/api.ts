@@ -32,3 +32,20 @@ export async function apiPost(path: string, body: unknown) {
   if (!res.ok) throw new Error(`POST ${path} failed`);
   return res.json();
 }
+
+export async function apiDelete(path: string) {
+  const token = getToken();
+  const res = await fetch(apiUrl(path), {
+    method: "DELETE",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const data = await res.json();
+      detail = data?.detail ? `: ${data.detail}` : "";
+    } catch {}
+    throw new Error(`DELETE ${path} failed${detail}`);
+  }
+  return res.json();
+}

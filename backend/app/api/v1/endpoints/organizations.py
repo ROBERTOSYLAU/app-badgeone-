@@ -1,7 +1,7 @@
 import json
 from urllib import request, error
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -94,14 +94,39 @@ def deactivate_org(org_id: int, db: Session = Depends(get_db), _=Depends(require
     if not org:
         raise HTTPException(status_code=404, detail="Organização não encontrada")
 
+    org.status = "inactive"
+    db.commit()
+    db.refresh(org)
+    return {"ok": True, "mode": "deactivated", "id": org.id, "status": org.status}
+
+
+@router.post("/{org_id}/activate")
+def activate_org(org_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organização não encontrada")
+
+    org.status = "active"
+    db.commit()
+    db.refresh(org)
+    return {"ok": True, "mode": "activated", "id": org.id, "status": org.status}
+
+
+@router.delete("/{org_id}")
+def delete_org(org_id: int, force: bool = Query(False), db: Session = Depends(get_db), _=Depends(require_admin)):
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organização não encontrada")
+
     has_lot = db.query(BadgeLot).filter(BadgeLot.organization_id == org_id).first() is not None
     has_cred = db.query(Credential).filter(Credential.organization_id == org_id).first() is not None
 
-    if has_lot or has_cred:
-        org.status = "inactive"
-        db.commit()
-        db.refresh(org)
-        return {"ok": True, "mode": "deactivated", "id": org.id, "status": org.status}
+    if (has_lot or has_cred) and not force:
+        raise HTTPException(status_code=409, detail="Organização possui vínculos. Use force=true para exclusão total.")
+
+    if force:
+        db.query(Credential).filter(Credential.organization_id == org_id).delete(synchronize_session=False)
+        db.query(BadgeLot).filter(BadgeLot.organization_id == org_id).delete(synchronize_session=False)
 
     db.delete(org)
     db.commit()

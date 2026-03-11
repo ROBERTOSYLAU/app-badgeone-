@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiGet, apiPost } from "../../../../../lib/api";
+import { apiDelete, apiGet, apiPost } from "../../../../../lib/api";
 import { getRole, logout } from "../../../../../lib/auth";
 
 type Org = { id: number; name: string; document?: string; status: string };
@@ -39,15 +38,44 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
 
   async function deactivateOrganization() {
     if (!org) return;
-    const ok = window.confirm(`Confirmar desativação/exclusão da organização ${org.name}?`);
+    const ok = window.confirm(`Pausar organização ${org.name}?`);
     if (!ok) return;
 
     try {
-      const result = await apiPost(`/api/v1/organizations/${org.id}/deactivate`, {});
-      setMessage(result.mode === "deleted" ? "Organização excluída." : "Organização desativada com sucesso.");
-      setTimeout(() => router.push("/admin"), 800);
+      await apiPost(`/api/v1/organizations/${org.id}/deactivate`, {});
+      setMessage("Organização pausada com sucesso.");
+      setOrg({ ...org, status: "inactive" });
     } catch {
-      setMessage("Erro ao desativar organização.");
+      setMessage("Erro ao pausar organização.");
+    }
+  }
+
+  async function activateOrganization() {
+    if (!org) return;
+    const ok = window.confirm(`Ativar organização ${org.name}?`);
+    if (!ok) return;
+
+    try {
+      await apiPost(`/api/v1/organizations/${org.id}/activate`, {});
+      setMessage("Organização ativada com sucesso.");
+      setOrg({ ...org, status: "active" });
+    } catch {
+      setMessage("Erro ao ativar organização.");
+    }
+  }
+
+  async function deleteOrganization() {
+    if (!org) return;
+    const ack = window.prompt(`Excluir geral a organização ${org.name}. Digite EXCLUIR para confirmar:`);
+    if (ack !== "EXCLUIR") return;
+
+    try {
+      await apiDelete(`/api/v1/organizations/${org.id}?force=true`);
+      setMessage("Organização excluída do sistema.");
+      setTimeout(() => router.push("/admin"), 700);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao excluir organização.";
+      setMessage(msg);
     }
   }
 
@@ -56,7 +84,7 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
       <div className="header-row">
         <h1>Organização</h1>
         <div style={{ display: "flex", gap: 8 }}>
-          <Link className="btn-ghost" href="/admin">Voltar</Link>
+          <button className="btn-ghost" onClick={() => router.push("/admin")}>← Voltar</button>
           <button className="btn-ghost" onClick={() => { logout(); router.push('/login'); }}>Sair</button>
         </div>
       </div>
@@ -72,7 +100,14 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
             <p><strong>ID:</strong> #{org.id}</p>
             <p><strong>CNPJ:</strong> {org.document || "não informado"}</p>
             <p><strong>Status:</strong> {org.status}</p>
-            <button className="btn-ghost" onClick={deactivateOrganization}>Excluir / Desativar organização</button>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {org.status === "active" ? (
+                <button className="btn-ghost" onClick={deactivateOrganization}>Pausar organização</button>
+              ) : (
+                <button className="btn-ghost" onClick={activateOrganization}>Ativar organização</button>
+              )}
+              <button className="btn-ghost" onClick={deleteOrganization}>Excluir geral do sistema</button>
+            </div>
           </section>
 
           <section className="card">
