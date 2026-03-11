@@ -78,7 +78,7 @@ export default function IssuerDashboard() {
     <main className="container">
       <div className="header-row">
         <h1>Emissor Dashboard</h1>
-        <button className="btn-ghost" onClick={() => { logout(); router.push('/login'); }}>Sair</button>
+        <button className="btn-ghost" onClick={() => { logout(); router.push('/'); }}>Sair</button>
       </div>
 
       <section className="card">

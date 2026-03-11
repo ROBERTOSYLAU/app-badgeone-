@@ -1,9 +1,9 @@
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_issuer_or_admin
+from app.core.auth import require_issuer_or_admin, require_admin
 from app.core.db import get_db
 from app.models.lot import BadgeLot
 from app.models.organization import Organization
@@ -20,6 +20,10 @@ class IssueCredentialRequest(BaseModel):
     recipient_name: str
     recipient_email: EmailStr | None = None
     course_name: str
+
+
+class CredentialUpdate(BaseModel):
+    status: str
 
 
 @router.post("/issue")
@@ -78,6 +82,26 @@ def issue_credential(payload: IssueCredentialRequest, db: Session = Depends(get_
     }
 
 
+@router.patch("/{credential_id}")
+def update_credential(credential_id: int, payload: CredentialUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    cred = db.query(Credential).filter(Credential.id == credential_id).first()
+    if not cred:
+        raise HTTPException(status_code=404, detail="Credencial não encontrada")
+
+    if payload.status not in {"valid", "paused", "revoked"}:
+        raise HTTPException(status_code=400, detail="Status inválido")
+
+    cred.status = payload.status
+    db.commit()
+    db.refresh(cred)
+
+    return {
+        "id": cred.id,
+        "public_id": cred.public_id,
+        "status": cred.status,
+    }
+
+
 @router.get("/verify/{public_id}")
 def verify_credential(public_id: str, db: Session = Depends(get_db)):
     c = db.query(Credential).filter(Credential.public_id == public_id).first()
@@ -96,11 +120,16 @@ def verify_credential(public_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("")
-def list_credentials(db: Session = Depends(get_db), _=Depends(require_issuer_or_admin)):
-    data = db.query(Credential).order_by(Credential.id.desc()).limit(200).all()
+def list_credentials(organization_id: int | None = Query(None), db: Session = Depends(get_db), _=Depends(require_issuer_or_admin)):
+    q = db.query(Credential)
+    if organization_id is not None:
+        q = q.filter(Credential.organization_id == organization_id)
+    data = q.order_by(Credential.id.desc()).limit(300).all()
     return [
         {
             "id": x.id,
+            "organization_id": x.organization_id,
+            "lot_id": x.lot_id,
             "public_id": x.public_id,
             "recipient_name": x.recipient_name,
             "course_name": x.course_name,

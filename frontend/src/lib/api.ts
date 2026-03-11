@@ -49,3 +49,24 @@ export async function apiDelete(path: string) {
   }
   return res.json();
 }
+
+export async function apiPatch(path: string, body: unknown) {
+  const token = getToken();
+  const res = await fetch(apiUrl(path), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const data = await res.json();
+      detail = data?.detail ? `: ${data.detail}` : "";
+    } catch {}
+    throw new Error(`PATCH ${path} failed${detail}`);
+  }
+  return res.json();
+}

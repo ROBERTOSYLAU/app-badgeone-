@@ -122,7 +122,7 @@ export default function AdminDashboard() {
     <main className="container">
       <div className="header-row">
         <h1>Admin Dashboard</h1>
-        <button className="btn-ghost" onClick={() => { logout(); router.push('/login'); }}>Sair</button>
+        <button className="btn-ghost" onClick={() => { logout(); router.push('/'); }}>Sair</button>
       </div>
 
       {message && <p className={message.includes("Erro") || message.includes("Não foi") ? "error" : "success"}>{message}</p>}

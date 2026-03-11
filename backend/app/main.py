@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.db import Base, engine
-from app.models import User, Organization, BadgeLot
+from app.models import User, Organization, BadgeLot, Credential, OrganizationNote
 
 app = FastAPI(
     title="Badge One App API",

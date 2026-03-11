@@ -16,6 +16,11 @@ class LotCreate(BaseModel):
     issue_window_days: int = 365
 
 
+class LotUpdate(BaseModel):
+    total_badges: int | None = None
+    status: str | None = None
+
+
 @router.post("")
 def create_lot(payload: LotCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     org = db.query(Organization).filter(Organization.id == payload.organization_id).first()
@@ -32,6 +37,36 @@ def create_lot(payload: LotCreate, db: Session = Depends(get_db), _=Depends(requ
     db.add(lot)
     db.commit()
     db.refresh(lot)
+    return {
+        "id": lot.id,
+        "organization_id": lot.organization_id,
+        "total_badges": lot.total_badges,
+        "issued": lot.issued,
+        "remaining": lot.total_badges - lot.issued,
+        "issue_window_days": lot.issue_window_days,
+        "status": lot.status,
+    }
+
+
+@router.patch("/{lot_id}")
+def update_lot(lot_id: int, payload: LotUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    lot = db.query(BadgeLot).filter(BadgeLot.id == lot_id).first()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lote não encontrado")
+
+    if payload.total_badges is not None:
+        if payload.total_badges < lot.issued:
+            raise HTTPException(status_code=400, detail="Total não pode ser menor que emitidos")
+        lot.total_badges = payload.total_badges
+
+    if payload.status is not None:
+        if payload.status not in {"active", "paused", "revoked", "finished"}:
+            raise HTTPException(status_code=400, detail="Status inválido")
+        lot.status = payload.status
+
+    db.commit()
+    db.refresh(lot)
+
     return {
         "id": lot.id,
         "organization_id": lot.organization_id,

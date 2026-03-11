@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiDelete, apiGet, apiPost } from "../../../../../lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost } from "../../../../../lib/api";
 import { getRole, logout } from "../../../../../lib/auth";
 
 type Org = { id: number; name: string; document?: string; status: string };
 type Lot = { id: number; organization_id: number; total_badges: number; issued: number; remaining: number; issue_window_days: number; status: string };
+type Note = { id: number; organization_id: number; title: string; content: string; created_at?: string };
+type Cred = { id: number; organization_id: number; lot_id: number; public_id: string; recipient_name: string; course_name: string; status: string };
 
 type TabKey = "overview" | "active" | "revoked" | "notes";
 
@@ -14,9 +16,27 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
   const router = useRouter();
   const [org, setOrg] = useState<Org | null>(null);
   const [lots, setLots] = useState<Lot[]>([]);
+  const [notesList, setNotesList] = useState<Note[]>([]);
+  const [credentials, setCredentials] = useState<Cred[]>([]);
   const [tab, setTab] = useState<TabKey>("overview");
+  const [noteTitle, setNoteTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState("");
+
+  const orgId = Number(params.id);
+
+  async function loadAll() {
+    const [orgs, allLots, allNotes, creds] = await Promise.all([
+      apiGet("/api/v1/organizations"),
+      apiGet("/api/v1/lots"),
+      apiGet(`/api/v1/organization-notes/${orgId}`),
+      apiGet(`/api/v1/credentials?organization_id=${orgId}`),
+    ]);
+    setOrg((orgs as Org[]).find((o) => o.id === orgId) || null);
+    setLots((allLots as Lot[]).filter((l) => l.organization_id === orgId));
+    setNotesList((allNotes as Note[]) || []);
+    setCredentials((creds as Cred[]) || []);
+  }
 
   useEffect(() => {
     if (getRole() !== "admin") {
@@ -24,17 +44,11 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
       return;
     }
 
-    Promise.all([apiGet("/api/v1/organizations"), apiGet("/api/v1/lots")])
-      .then(([orgs, allLots]) => {
-        const id = Number(params.id);
-        setOrg((orgs as Org[]).find((o) => o.id === id) || null);
-        setLots((allLots as Lot[]).filter((l) => l.organization_id === id));
-      })
-      .catch(() => router.push("/admin"));
-  }, [params.id, router]);
+    loadAll().catch(() => router.push("/admin"));
+  }, [orgId, router]);
 
-  const activeLots = useMemo(() => lots.filter((l) => l.status === "active"), [lots]);
-  const revokedLots = useMemo(() => lots.filter((l) => l.status !== "active"), [lots]);
+  const activeLots = useMemo(() => lots.filter((l) => l.status === "active" || l.status === "paused"), [lots]);
+  const revokedLots = useMemo(() => lots.filter((l) => l.status === "revoked" || l.status === "finished"), [lots]);
 
   async function deactivateOrganization() {
     if (!org) return;
@@ -79,13 +93,59 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
     }
   }
 
+  async function saveNote() {
+    if (!notes.trim()) return;
+    try {
+      await apiPost(`/api/v1/organization-notes/${orgId}`, { title: noteTitle || null, content: notes });
+      setMessage("Anotação salva.");
+      setNoteTitle("");
+      setNotes("");
+      await loadAll();
+    } catch {
+      setMessage("Erro ao salvar anotação.");
+    }
+  }
+
+  async function removeNote(noteId: number) {
+    if (!window.confirm("Remover anotação?")) return;
+    try {
+      await apiDelete(`/api/v1/organization-notes/${noteId}`);
+      await loadAll();
+      setMessage("Anotação removida.");
+    } catch {
+      setMessage("Erro ao remover anotação.");
+    }
+  }
+
+  async function updateLot(lotId: number, patch: { total_badges?: number; status?: string }) {
+    try {
+      await apiPatch(`/api/v1/lots/${lotId}`, patch);
+      await loadAll();
+      setMessage("Lote atualizado.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao atualizar lote.";
+      setMessage(msg);
+    }
+  }
+
+  async function updateCredential(credentialId: number, status: string) {
+    try {
+      await apiPatch(`/api/v1/credentials/${credentialId}`, { status });
+      await loadAll();
+      setMessage("Credencial atualizada.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao atualizar credencial.";
+      setMessage(msg);
+    }
+  }
+
   return (
     <main className="container">
       <div className="header-row">
         <h1>Organização</h1>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn-ghost" onClick={() => router.push("/admin")}>← Voltar</button>
-          <button className="btn-ghost" onClick={() => { logout(); router.push('/login'); }}>Sair</button>
+          <button className="btn-ghost" onClick={() => { logout(); router.push('/'); }}>Sair</button>
         </div>
       </div>
 
@@ -127,12 +187,50 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
             )}
 
             {tab === "active" && (
-              <ul className="list">
-                {activeLots.map((l) => (
-                  <li key={l.id}>Lote #{l.id} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}</li>
-                ))}
-                {!activeLots.length && <li>Nenhum lote ativo.</li>}
-              </ul>
+              <div className="form-grid">
+                <ul className="list">
+                  {activeLots.map((l) => (
+                    <li key={l.id}>
+                      <div style={{ display: "grid", gap: 6 }}>
+                        <span>Lote #{l.id} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Status {l.status}</span>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <button className="btn-ghost" onClick={() => {
+                            const v = window.prompt("Novo total de badges:", String(l.total_badges));
+                            if (!v) return;
+                            const n = Number(v);
+                            if (Number.isNaN(n)) return;
+                            updateLot(l.id, { total_badges: n });
+                          }}>Editar quantidade</button>
+                          {l.status === "active" ? (
+                            <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "paused" })}>Pausar lote</button>
+                          ) : (
+                            <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "active" })}>Ativar lote</button>
+                          )}
+                          <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "revoked" })}>Revogar lote</button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                  {!activeLots.length && <li>Nenhum lote ativo/pausado.</li>}
+                </ul>
+
+                <div className="card" style={{ marginBottom: 0 }}>
+                  <h2 style={{ fontSize: 16 }}>Credenciais emitidas desta organização</h2>
+                  <ul className="list">
+                    {credentials.map((c) => (
+                      <li key={c.id}>
+                        {c.recipient_name} | {c.course_name} | status: {c.status}
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+                          <button className="btn-ghost" onClick={() => updateCredential(c.id, "paused")}>Pausar</button>
+                          <button className="btn-ghost" onClick={() => updateCredential(c.id, "revoked")}>Revogar</button>
+                          <button className="btn-ghost" onClick={() => updateCredential(c.id, "valid")}>Ativar</button>
+                        </div>
+                      </li>
+                    ))}
+                    {!credentials.length && <li>Nenhuma credencial emitida ainda.</li>}
+                  </ul>
+                </div>
+              </div>
             )}
 
             {tab === "revoked" && (
@@ -146,13 +244,25 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
 
             {tab === "notes" && (
               <div className="form-grid" style={{ maxWidth: 760 }}>
+                <input value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} placeholder="Título (opcional)" />
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Anotações internas desta organização..."
                   style={{ minHeight: 140, borderRadius: 8, padding: 10, background: "#0a163e", color: "#fff", border: "1px solid #2a3b73" }}
                 />
-                <p className="muted">Anotações locais da sessão (próxima etapa: persistir no backend).</p>
+                <button onClick={saveNote}>Salvar anotação</button>
+                <p className="muted">Total de anotações: {notesList.length}</p>
+                <ul className="list">
+                  {notesList.map((n, i) => (
+                    <li key={n.id}>
+                      <strong>{i + 1}. {n.title}</strong> <span className="muted">({n.created_at?.slice(0, 10) || "-"})</span>
+                      <p>{n.content}</p>
+                      <button className="btn-ghost" onClick={() => removeNote(n.id)}>Excluir anotação</button>
+                    </li>
+                  ))}
+                  {!notesList.length && <li>Nenhuma anotação salva.</li>}
+                </ul>
               </div>
             )}
           </section>
