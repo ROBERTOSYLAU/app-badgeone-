@@ -270,7 +270,19 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
             {tab === "revoked" && (
               <ul className="list">
                 {revokedLots.map((l) => (
-                  <li key={l.id}>Lote #{l.id} | Status {l.status} | Emitidos {l.issued}</li>
+                  <li key={l.id}>
+                    Lote #{l.id} | Status {l.status} | Emitidos {l.issued} | Total {l.total_badges}
+                    <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button className="btn-ghost" onClick={() => {
+                        const v = window.prompt("Novo total de badges:", String(l.total_badges));
+                        if (!v) return;
+                        const n = Number(v);
+                        if (Number.isNaN(n)) return;
+                        updateLot(l.id, { total_badges: n });
+                      }}>Editar quantidade</button>
+                      <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "active" })}>Reativar lote</button>
+                    </div>
+                  </li>
                 ))}
                 {!revokedLots.length && <li>Nenhum lote revogado/finalizado.</li>}
               </ul>

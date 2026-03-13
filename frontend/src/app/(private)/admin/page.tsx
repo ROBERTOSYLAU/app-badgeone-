@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiGet, apiPost } from "../../../lib/api";
 import { getRole, logout } from "../../../lib/auth";
@@ -40,6 +40,7 @@ export default function AdminDashboard() {
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const [orgFilter, setOrgFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [lotFilterMode, setLotFilterMode] = useState<"all" | "active" | "revoked">("all");
 
   async function loadData() {
     const [o, l] = await Promise.all([apiGet("/api/v1/organizations"), apiGet("/api/v1/lots")]);
@@ -131,6 +132,12 @@ export default function AdminDashboard() {
   const kpiIssued = lots.reduce((a, b) => a + b.issued, 0);
   const kpiRevokedLots = lots.filter((l) => l.status === "revoked").length;
 
+  const filteredLots = useMemo(() => {
+    if (lotFilterMode === "active") return lots.filter((l) => l.status === "active");
+    if (lotFilterMode === "revoked") return lots.filter((l) => l.status === "revoked" || l.status === "finished");
+    return lots;
+  }, [lots, lotFilterMode]);
+
   return (
     <main className="container">
       <div className="header-row">
@@ -143,10 +150,18 @@ export default function AdminDashboard() {
       <section className="card">
         <h2>Visão rápida</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-          <div className="card" style={{ margin: 0 }}><strong>{kpiActiveOrgs}</strong><p>Organizações ativas</p></div>
-          <div className="card" style={{ margin: 0 }}><strong>{kpiActiveLots}</strong><p>Lotes ativos</p></div>
-          <div className="card" style={{ margin: 0 }}><strong>{kpiIssued}</strong><p>Badges emitidos</p></div>
-          <div className="card" style={{ margin: 0 }}><strong>{kpiRevokedLots}</strong><p>Lotes revogados</p></div>
+          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => { setStatusFilter("active"); setMessage("Filtro aplicado: organizações ativas"); }}>
+            <strong>{kpiActiveOrgs}</strong><p>Organizações ativas</p>
+          </button>
+          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => { setLotFilterMode("active"); setMessage("Filtro aplicado: lotes ativos"); }}>
+            <strong>{kpiActiveLots}</strong><p>Lotes ativos</p>
+          </button>
+          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => router.push('/issuer')}>
+            <strong>{kpiIssued}</strong><p>Badges emitidos</p>
+          </button>
+          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => { setLotFilterMode("revoked"); setMessage("Filtro aplicado: lotes revogados"); }}>
+            <strong>{kpiRevokedLots}</strong><p>Lotes revogados</p>
+          </button>
         </div>
       </section>
 
@@ -218,8 +233,13 @@ export default function AdminDashboard() {
 
       <section className="card">
         <h2>Lotes</h2>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+          <button className="btn-ghost" onClick={() => setLotFilterMode("all")}>Todos</button>
+          <button className="btn-ghost" onClick={() => setLotFilterMode("active")}>Ativos</button>
+          <button className="btn-ghost" onClick={() => setLotFilterMode("revoked")}>Revogados</button>
+        </div>
         <ul className="list">
-          {lots.map((l, i) => {
+          {filteredLots.map((l, i) => {
             const org = orgs.find((o) => o.id === l.organization_id);
             return (
               <li key={l.id}>
@@ -227,6 +247,7 @@ export default function AdminDashboard() {
               </li>
             );
           })}
+          {!filteredLots.length && <li>Nenhum lote para esse filtro.</li>}
         </ul>
       </section>
     </main>
