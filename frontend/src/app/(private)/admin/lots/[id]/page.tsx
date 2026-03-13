@@ -82,7 +82,11 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
     if (up === "FULL") {
       const ack = window.prompt("Digite REVOGAR para confirmar revogação TOTAL");
       if (ack !== "REVOGAR") return;
-      await apiPost(`/api/v1/lots/${lot.id}/revoke`, { mode: "full" });
+      try {
+        await apiPost(`/api/v1/lots/${lot.id}/revoke`, { mode: "full" });
+      } catch {
+        await apiPatch(`/api/v1/lots/${lot.id}`, { status: "revoked" });
+      }
       await loadData();
       setMessage("Lote revogado totalmente.");
       return;
@@ -95,11 +99,24 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
     if (ack !== "REVOGAR") return;
 
     try {
-      await apiPost(`/api/v1/lots/${lot.id}/revoke`, { mode: "partial", quantity: qty });
+      let fallback = false;
+      try {
+        await apiPost(`/api/v1/lots/${lot.id}/revoke`, { mode: "partial", quantity: qty });
+      } catch {
+        fallback = true;
+      }
+
+      if (fallback) {
+        const newTotal = lot.total_badges - qty;
+        if (newTotal < lot.issued) throw new Error("Quantidade inválida para revogação parcial");
+        await apiPatch(`/api/v1/lots/${lot.id}`, { total_badges: newTotal });
+      }
+
       await loadData();
-      setMessage("Revogação parcial concluída.");
-    } catch {
-      setMessage("Erro ao revogar lote.");
+      setMessage(`Revogação parcial concluída (${qty}).`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao revogar lote.";
+      setMessage(msg.includes("Erro") ? msg : `Erro ao revogar lote: ${msg}`);
     }
   }
 

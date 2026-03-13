@@ -29,7 +29,14 @@ export async function apiPost(path: string, body: unknown) {
     },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${path} failed`);
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const data = await res.json();
+      detail = data?.detail ? `: ${data.detail}` : "";
+    } catch {}
+    throw new Error(`POST ${path} failed${detail}`);
+  }
   return res.json();
 }
 
