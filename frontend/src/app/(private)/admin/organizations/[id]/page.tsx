@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../../../lib/api";
@@ -141,6 +142,41 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
     }
   }
 
+  async function revokeLotFlow(l: Lot) {
+    const mode = window.prompt("Tipo de revogação: FULL (total) ou PARTIAL (parcial)", "PARTIAL");
+    if (!mode) return;
+    const up = mode.toUpperCase();
+
+    if (up === "FULL") {
+      const ack = window.prompt("Digite REVOGAR para confirmar revogação TOTAL");
+      if (ack !== "REVOGAR") return;
+      await apiPost(`/api/v1/lots/${l.id}/revoke`, { mode: "full" });
+      await loadAll();
+      setMessage("Lote revogado totalmente.");
+      return;
+    }
+
+    const qtyInput = window.prompt("Quantidade a revogar (somente saldo não emitido)", "1");
+    const qty = Number(qtyInput);
+    if (Number.isNaN(qty) || qty <= 0) return;
+    const ack = window.prompt(`Digite REVOGAR para confirmar revogação parcial de ${qty}`);
+    if (ack !== "REVOGAR") return;
+
+    await apiPost(`/api/v1/lots/${l.id}/revoke`, { mode: "partial", quantity: qty });
+    await loadAll();
+    setMessage("Revogação parcial concluída.");
+  }
+
+  async function recoverLotFlow(l: Lot) {
+    const ack = window.prompt(`Digite RECUPERAR para confirmar recuperação do lote ${l.title || '#' + l.id}`);
+    if (ack !== "RECUPERAR") return;
+    const qtyInput = window.prompt("Quantidade para recuperar (opcional)", "0");
+    const qty = qtyInput && !Number.isNaN(Number(qtyInput)) ? Number(qtyInput) : 0;
+    await apiPost(`/api/v1/lots/${l.id}/recover`, { quantity: qty, to_status: "active" });
+    await loadAll();
+    setMessage("Lote recuperado com sucesso.");
+  }
+
   async function updateCredential(credentialId: number, status: string) {
     try {
       await apiPatch(`/api/v1/credentials/${credentialId}`, { status });
@@ -222,7 +258,7 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                   {activeLots.map((l) => (
                     <li key={l.id}>
                       <div style={{ display: "grid", gap: 6 }}>
-                        <span>Lote #{l.id} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Status {l.status}</span>
+                        <span><Link href={`/admin/lots/${l.id}`}>{l.title || `Lote #${l.id}`}</Link> | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Status {l.status}</span>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                           <button className="btn-ghost" onClick={() => {
                             const v = window.prompt("Novo total de badges:", String(l.total_badges));
@@ -236,11 +272,7 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                           ) : (
                             <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "active" })}>Ativar lote</button>
                           )}
-                          <button className="btn-ghost" onClick={() => {
-                            const ack = window.prompt("Digite REVOGAR para confirmar revogação do lote");
-                            if (ack !== "REVOGAR") return;
-                            updateLot(l.id, { status: "revoked" });
-                          }}>Revogar lote</button>
+                          <button className="btn-ghost" onClick={() => revokeLotFlow(l)}>Revogar lote</button>
                           <button className="btn-ghost" onClick={() => {
                             const ack = window.prompt("Digite EXCLUIR para enviar lote à lixeira");
                             if (ack !== "EXCLUIR") return;
@@ -294,7 +326,7 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                         if (Number.isNaN(n)) return;
                         updateLot(l.id, { total_badges: n });
                       }}>Editar quantidade</button>
-                      <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "active" })}>Reativar lote</button>
+                      <button className="btn-ghost" onClick={() => recoverLotFlow(l)}>Recuperar lote</button>
                     </div>
                   </li>
                 ))}
