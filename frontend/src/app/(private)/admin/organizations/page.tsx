@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { apiGet } from "../../../../lib/api";
 import { getRole } from "../../../../lib/auth";
 
@@ -12,11 +12,14 @@ type Org = { id: number; name: string; document?: string; status: string };
 
 export default function AdminOrganizationsPage() {
   const router = useRouter();
-  const search = useSearchParams();
   const [orgs, setOrgs] = useState<Org[]>([]);
-  const status = search.get("status") || "all";
+  const [status, setStatus] = useState("all");
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const s = new URLSearchParams(window.location.search).get("status") || "all";
+      setStatus(s);
+    }
     if (getRole() !== "admin") return router.push("/login");
     apiGet("/api/v1/organizations").then(setOrgs).catch(() => router.push("/admin"));
   }, [router]);

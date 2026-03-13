@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { apiGet } from "../../../../lib/api";
 import { getRole } from "../../../../lib/auth";
 
@@ -12,12 +12,15 @@ type Org = { id: number; name: string };
 
 export default function AdminLotsPage() {
   const router = useRouter();
-  const search = useSearchParams();
   const [lots, setLots] = useState<Lot[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
-  const status = search.get("status") || "all";
+  const [status, setStatus] = useState("all");
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const s = new URLSearchParams(window.location.search).get("status") || "all";
+      setStatus(s);
+    }
     if (getRole() !== "admin") return router.push('/login');
     Promise.all([apiGet('/api/v1/lots'), apiGet('/api/v1/organizations')]).then(([l, o]) => { setLots(l); setOrgs(o); }).catch(() => router.push('/admin'));
   }, [router]);
