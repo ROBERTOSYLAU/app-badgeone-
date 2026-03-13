@@ -242,9 +242,9 @@ export default function AdminDashboard() {
       <section className="card">
         <h2>Lotes</h2>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-          <button className="btn-ghost" onClick={() => setLotFilterMode("all")}>Todos</button>
-          <button className="btn-ghost" onClick={() => setLotFilterMode("active")}>Ativos</button>
-          <button className="btn-ghost" onClick={() => setLotFilterMode("revoked")}>Revogados</button>
+          <button className={lotFilterMode === "all" ? "btn-active" : "btn-ghost"} onClick={() => setLotFilterMode("all")}>Todos</button>
+          <button className={lotFilterMode === "active" ? "btn-active" : "btn-ghost"} onClick={() => setLotFilterMode("active")}>Ativos</button>
+          <button className={lotFilterMode === "revoked" ? "btn-active" : "btn-ghost"} onClick={() => setLotFilterMode("revoked")}>Revogados</button>
         </div>
         <ul className="list">
           {filteredLots.map((l, i) => {

@@ -84,6 +84,13 @@ export default function AdminLotsPage() {
       {message && <p className={message.includes("Erro") ? "error" : "success"}>{message}</p>}
 
       <section className="card">
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+          <button className={status === "all" ? "btn-active" : "btn-ghost"} onClick={() => setStatus("all")}>Todos</button>
+          <button className={status === "active" ? "btn-active" : "btn-ghost"} onClick={() => setStatus("active")}>Ativos</button>
+          <button className={status === "paused" ? "btn-active" : "btn-ghost"} onClick={() => setStatus("paused")}>Pausados</button>
+          <button className={status === "revoked" ? "btn-active" : "btn-ghost"} onClick={() => setStatus("revoked")}>Revogados</button>
+          <button className={status === "trashed" ? "btn-active" : "btn-ghost"} onClick={() => setStatus("trashed")}>Lixeira</button>
+        </div>
         <ul className="list">
           {filtered.map((l, i) => {
             const org = orgs.find((o) => o.id === l.organization_id);

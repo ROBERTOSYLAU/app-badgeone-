@@ -223,11 +223,11 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
 
           <section className="card">
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-              <button className="btn-ghost" onClick={() => setTab("overview")}>Visão geral</button>
-              <button className="btn-ghost" onClick={() => setTab("active")}>Lotes ativos</button>
-              <button className="btn-ghost" onClick={() => setTab("revoked")}>Lotes revogados/finalizados</button>
-              <button className="btn-ghost" onClick={() => setTab("notes")}>Anotações</button>
-              <button className="btn-ghost" onClick={() => setTab("trash")}>Lixeira</button>
+              <button className={tab === "overview" ? "btn-active" : "btn-ghost"} onClick={() => setTab("overview")}>Visão geral</button>
+              <button className={tab === "active" ? "btn-active" : "btn-ghost"} onClick={() => setTab("active")}>Lotes ativos</button>
+              <button className={tab === "revoked" ? "btn-active" : "btn-ghost"} onClick={() => setTab("revoked")}>Lotes revogados/finalizados</button>
+              <button className={tab === "notes" ? "btn-active" : "btn-ghost"} onClick={() => setTab("notes")}>Anotações</button>
+              <button className={tab === "trash" ? "btn-active" : "btn-ghost"} onClick={() => setTab("trash")}>Lixeira</button>
             </div>
 
             {tab === "overview" && (
