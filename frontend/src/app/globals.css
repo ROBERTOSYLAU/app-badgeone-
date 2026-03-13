@@ -95,6 +95,13 @@ button:disabled { opacity: .6; cursor: not-allowed; }
   background: rgba(31, 113, 215, 0.15);
 }
 
+.lot-title-highlight {
+  color: #7ff0b2;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
 @media (max-width: 640px) {
   h1 { font-size: 26px; }
   .container { width: 94vw; margin-top: 16px; }

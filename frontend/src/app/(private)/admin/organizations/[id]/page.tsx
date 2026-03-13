@@ -258,7 +258,7 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                   {activeLots.map((l) => (
                     <li key={l.id}>
                       <div style={{ display: "grid", gap: 6 }}>
-                        <span><Link href={`/admin/lots/${l.id}`}>{l.title || `Lote #${l.id}`}</Link> | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Status {l.status}</span>
+                        <span><Link className="lot-title-highlight" href={`/admin/lots/${l.id}`}>{(l.title || `Lote #${l.id}`).toUpperCase()}</Link> | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Status {l.status}</span>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                           <button className="btn-ghost" onClick={() => router.push(`/admin/lots/${l.id}`)}>Editar quantidade</button>
                           {l.status === "active" ? (

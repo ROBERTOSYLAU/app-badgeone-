@@ -147,7 +147,7 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
 
       {lot && (
         <section className="card">
-          <h2>{lot.title || `Lote #${lot.id}`}</h2>
+          <h2 className="lot-title-highlight">{(lot.title || `Lote #${lot.id}`).toUpperCase()}</h2>
           <p><strong>Empresa:</strong> {org?.name || lot.organization_id}</p>
           <p><strong>Status:</strong> {statusLabel(lot.status)}</p>
           <p><strong>Total:</strong> {lot.total_badges}</p>
@@ -158,14 +158,15 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
 
           <div className="form-grid" style={{ marginTop: 10 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <label className="muted">Total do lote</label>
+              <label className="muted">Definir total do lote</label>
               <input type="number" min={lot.issued} value={editTotalValue} onChange={(e) => setEditTotalValue(Number(e.target.value))} style={{ maxWidth: 140 }} />
               <button className="btn-ghost" onClick={editTotal}>Salvar total</button>
             </div>
 
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <label className="muted">Qtd para reduzir saldo</label>
+              <label className="muted">Reduzir do saldo atual</label>
               <input type="number" min={1} max={Math.max(lot.remaining, 1)} value={revokeQty} onChange={(e) => setRevokeQty(Number(e.target.value))} style={{ maxWidth: 140 }} />
+              <span className="muted">Prévia: {lot.total_badges} - {revokeQty} = {Math.max(lot.total_badges - revokeQty, lot.issued)}</span>
               <button className="btn-ghost" onClick={reduzirSaldoParcial}>Reduzir saldo</button>
               <button className="btn-ghost" onClick={encerrarLote}>Encerrar lote</button>
             </div>
