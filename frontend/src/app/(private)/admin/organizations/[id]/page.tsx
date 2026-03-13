@@ -6,7 +6,7 @@ import { apiDelete, apiGet, apiPatch, apiPost } from "../../../../../lib/api";
 import { getRole, logout } from "../../../../../lib/auth";
 
 type Org = { id: number; name: string; document?: string; status: string };
-type Lot = { id: number; organization_id: number; total_badges: number; issued: number; remaining: number; issue_window_days: number; status: string };
+type Lot = { id: number; organization_id: number; title?: string; description?: string; total_badges: number; issued: number; remaining: number; issue_window_days: number; status: string };
 type Note = { id: number; organization_id: number; title: string; content: string; created_at?: string };
 type Cred = { id: number; organization_id: number; lot_id: number; public_id: string; recipient_name: string; course_name: string; status: string };
 
@@ -195,10 +195,24 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
             </div>
 
             {tab === "overview" && (
-              <div>
-                <p><strong>Total de lotes:</strong> {lots.length}</p>
-                <p><strong>Total emitido:</strong> {lots.reduce((a, b) => a + b.issued, 0)}</p>
-                <p><strong>Saldo total:</strong> {lots.reduce((a, b) => a + b.remaining, 0)}</p>
+              <div className="form-grid">
+                <div>
+                  <p><strong>Total de lotes:</strong> {lots.length}</p>
+                  <p><strong>Total emitido:</strong> {lots.reduce((a, b) => a + b.issued, 0)}</p>
+                  <p><strong>Saldo total:</strong> {lots.reduce((a, b) => a + b.remaining, 0)}</p>
+                </div>
+                <div className="card" style={{ marginBottom: 0 }}>
+                  <h2 style={{ fontSize: 16 }}>Detalhe dos lotes da organização</h2>
+                  <ul className="list">
+                    {lots.map((l, i) => (
+                      <li key={l.id}>
+                        {i + 1}. {l.title || `Lote #${l.id}`} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
+                        {l.description ? <p className="muted">{l.description}</p> : null}
+                      </li>
+                    ))}
+                    {!lots.length && <li>Nenhum lote cadastrado.</li>}
+                  </ul>
+                </div>
               </div>
             )}
 

@@ -7,7 +7,7 @@ import { apiGet, apiPost } from "../../../lib/api";
 import { getRole, logout } from "../../../lib/auth";
 
 type Org = { id: number; name: string; document?: string; status: string };
-type Lot = { id: number; organization_id: number; total_badges: number; issued: number; remaining: number; issue_window_days: number; status: string };
+type Lot = { id: number; organization_id: number; title?: string; description?: string; total_badges: number; issued: number; remaining: number; issue_window_days: number; status: string };
 type CnpjData = {
   cnpj: string;
   razao_social?: string;
@@ -34,6 +34,8 @@ export default function AdminDashboard() {
   const [orgName, setOrgName] = useState("");
   const [orgDoc, setOrgDoc] = useState("");
   const [lotOrgId, setLotOrgId] = useState("");
+  const [lotTitle, setLotTitle] = useState("");
+  const [lotDescription, setLotDescription] = useState("");
   const [lotTotal, setLotTotal] = useState("0");
   const [message, setMessage] = useState("");
   const [cnpjData, setCnpjData] = useState<CnpjData | null>(null);
@@ -109,10 +111,14 @@ export default function AdminDashboard() {
     try {
       await apiPost("/api/v1/lots", {
         organization_id: Number(lotOrgId),
+        title: lotTitle || null,
+        description: lotDescription || null,
         total_badges: Number(lotTotal || 0),
         issue_window_days: 365,
       });
       setLotOrgId("");
+      setLotTitle("");
+      setLotDescription("");
       setLotTotal("0");
       setMessage("Lote criado com sucesso.");
       await loadData();
@@ -150,16 +156,16 @@ export default function AdminDashboard() {
       <section className="card">
         <h2>Visão rápida</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
-          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => { setStatusFilter("active"); setMessage("Filtro aplicado: organizações ativas"); }}>
+          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => router.push('/admin/organizations?status=active')}>
             <strong>{kpiActiveOrgs}</strong><p>Organizações ativas</p>
           </button>
-          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => { setLotFilterMode("active"); setMessage("Filtro aplicado: lotes ativos"); }}>
+          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => router.push('/admin/lots?status=active')}>
             <strong>{kpiActiveLots}</strong><p>Lotes ativos</p>
           </button>
-          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => router.push('/issuer')}>
+          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => router.push('/admin/emissions')}>
             <strong>{kpiIssued}</strong><p>Badges emitidos</p>
           </button>
-          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => { setLotFilterMode("revoked"); setMessage("Filtro aplicado: lotes revogados"); }}>
+          <button className="btn-ghost" style={{ textAlign: "left" }} onClick={() => router.push('/admin/lots?status=revoked')}>
             <strong>{kpiRevokedLots}</strong><p>Lotes revogados</p>
           </button>
         </div>
@@ -205,6 +211,8 @@ export default function AdminDashboard() {
               <option key={o.id} value={o.id}>{o.name}</option>
             ))}
           </select>
+          <input value={lotTitle} onChange={(e) => setLotTitle(e.target.value)} placeholder="Nome do lote (ex.: Arquitetura 2026)" />
+          <input value={lotDescription} onChange={(e) => setLotDescription(e.target.value)} placeholder="Descrição do lote (opcional)" />
           <input value={lotTotal} onChange={(e) => setLotTotal(e.target.value)} type="number" min={0} placeholder="0" required />
           <button type="submit">Criar lote</button>
         </form>
@@ -243,7 +251,7 @@ export default function AdminDashboard() {
             const org = orgs.find((o) => o.id === l.organization_id);
             return (
               <li key={l.id}>
-                {i + 1}. Lote #{l.id} | Empresa {org?.name || `#${l.organization_id}`} | Status {l.status} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
+                {i + 1}. {l.title ? `${l.title} | ` : ""}Lote #{l.id} | Empresa {org?.name || `#${l.organization_id}`} | Status {l.status} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
               </li>
             );
           })}

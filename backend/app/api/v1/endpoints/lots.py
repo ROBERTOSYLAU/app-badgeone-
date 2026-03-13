@@ -12,11 +12,15 @@ router = APIRouter()
 
 class LotCreate(BaseModel):
     organization_id: int
+    title: str | None = None
+    description: str | None = None
     total_badges: int
     issue_window_days: int = 365
 
 
 class LotUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
     total_badges: int | None = None
     status: str | None = None
 
@@ -29,6 +33,8 @@ def create_lot(payload: LotCreate, db: Session = Depends(get_db), _=Depends(requ
 
     lot = BadgeLot(
         organization_id=payload.organization_id,
+        title=(payload.title or "").strip() or None,
+        description=(payload.description or "").strip() or None,
         total_badges=payload.total_badges,
         issued=0,
         issue_window_days=payload.issue_window_days,
@@ -40,6 +46,8 @@ def create_lot(payload: LotCreate, db: Session = Depends(get_db), _=Depends(requ
     return {
         "id": lot.id,
         "organization_id": lot.organization_id,
+        "title": lot.title,
+        "description": lot.description,
         "total_badges": lot.total_badges,
         "issued": lot.issued,
         "remaining": lot.total_badges - lot.issued,
@@ -53,6 +61,12 @@ def update_lot(lot_id: int, payload: LotUpdate, db: Session = Depends(get_db), _
     lot = db.query(BadgeLot).filter(BadgeLot.id == lot_id).first()
     if not lot:
         raise HTTPException(status_code=404, detail="Lote não encontrado")
+
+    if payload.title is not None:
+        lot.title = (payload.title or "").strip() or None
+
+    if payload.description is not None:
+        lot.description = (payload.description or "").strip() or None
 
     if payload.total_badges is not None:
         if payload.total_badges < lot.issued:
@@ -70,6 +84,8 @@ def update_lot(lot_id: int, payload: LotUpdate, db: Session = Depends(get_db), _
     return {
         "id": lot.id,
         "organization_id": lot.organization_id,
+        "title": lot.title,
+        "description": lot.description,
         "total_badges": lot.total_badges,
         "issued": lot.issued,
         "remaining": lot.total_badges - lot.issued,
@@ -85,6 +101,8 @@ def list_lots(db: Session = Depends(get_db), _=Depends(require_issuer_or_admin))
         {
             "id": x.id,
             "organization_id": x.organization_id,
+            "title": x.title,
+            "description": x.description,
             "total_badges": x.total_badges,
             "issued": x.issued,
             "remaining": x.total_badges - x.issued,
