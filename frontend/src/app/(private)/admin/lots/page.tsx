@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiGet, apiPatch } from "../../../../lib/api";
+import { apiGet, apiPost } from "../../../../lib/api";
 import { getRole } from "../../../../lib/auth";
 
 type Lot = { id: number; organization_id: number; title?: string; description?: string; total_badges: number; issued: number; remaining: number; status: string };
@@ -62,12 +62,11 @@ export default function AdminLotsPage() {
     const ack = window.prompt(`Digite RECUPERAR para confirmar a recuperação do lote ${lot.title || '#' + lot.id}`);
     if (ack !== "RECUPERAR") return;
 
-    const totalInput = window.prompt("Informe o total de badges após recuperação (opcional)", String(lot.total_badges));
-    const patch: { status: string; total_badges?: number } = { status: "active" };
-    if (totalInput && !Number.isNaN(Number(totalInput))) patch.total_badges = Number(totalInput);
+    const qtyInput = window.prompt("Quantidade para recuperar (opcional, ex.: 10)", "0");
+    const qty = qtyInput && !Number.isNaN(Number(qtyInput)) ? Number(qtyInput) : 0;
 
     try {
-      await apiPatch(`/api/v1/lots/${lot.id}`, patch);
+      await apiPost(`/api/v1/lots/${lot.id}/recover`, { quantity: qty, to_status: "active" });
       setMessage("Lote recuperado com sucesso.");
       await loadData();
     } catch {

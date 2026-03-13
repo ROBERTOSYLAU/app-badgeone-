@@ -26,6 +26,16 @@ class LotUpdate(BaseModel):
     status: str | None = None
 
 
+class LotRevokeRequest(BaseModel):
+    mode: str = "full"  # full | partial
+    quantity: int | None = None
+
+
+class LotRecoverRequest(BaseModel):
+    quantity: int | None = None
+    to_status: str = "active"
+
+
 @router.post("")
 def create_lot(payload: LotCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
     org = db.query(Organization).filter(Organization.id == payload.organization_id).first()
@@ -98,6 +108,67 @@ def update_lot(lot_id: int, payload: LotUpdate, db: Session = Depends(get_db), _
         "remaining": lot.total_badges - lot.issued,
         "issue_window_days": lot.issue_window_days,
         "status": lot.status,
+    }
+
+
+@router.post("/{lot_id}/revoke")
+def revoke_lot(lot_id: int, payload: LotRevokeRequest, db: Session = Depends(get_db), _=Depends(require_admin)):
+    lot = db.query(BadgeLot).filter(BadgeLot.id == lot_id).first()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lote não encontrado")
+
+    if payload.mode not in {"full", "partial"}:
+        raise HTTPException(status_code=400, detail="Modo inválido")
+
+    if payload.mode == "full":
+        lot.status = "revoked"
+        log_action(db, "lot", lot.id, "revoke_full", f"Revogação total do lote {lot.id}")
+    else:
+        qty = payload.quantity or 0
+        if qty <= 0:
+            raise HTTPException(status_code=400, detail="Quantidade inválida")
+        available = lot.total_badges - lot.issued
+        if qty > available:
+            raise HTTPException(status_code=400, detail=f"Quantidade maior que saldo disponível ({available})")
+        lot.total_badges = lot.total_badges - qty
+        log_action(db, "lot", lot.id, "revoke_partial", f"Revogado parcialmente: {qty}. Novo total={lot.total_badges}")
+
+    db.commit()
+    db.refresh(lot)
+    return {
+        "id": lot.id,
+        "status": lot.status,
+        "total_badges": lot.total_badges,
+        "issued": lot.issued,
+        "remaining": lot.total_badges - lot.issued,
+    }
+
+
+@router.post("/{lot_id}/recover")
+def recover_lot(lot_id: int, payload: LotRecoverRequest, db: Session = Depends(get_db), _=Depends(require_admin)):
+    lot = db.query(BadgeLot).filter(BadgeLot.id == lot_id).first()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lote não encontrado")
+
+    qty = payload.quantity or 0
+    if qty > 0:
+        lot.total_badges = lot.total_badges + qty
+
+    if payload.to_status not in {"active", "paused", "revoked", "finished", "trashed"}:
+        raise HTTPException(status_code=400, detail="Status de recuperação inválido")
+
+    before_status = lot.status
+    lot.status = payload.to_status
+    log_action(db, "lot", lot.id, "recover", f"Recuperado: status {before_status}->{lot.status}, quantidade+={qty}")
+
+    db.commit()
+    db.refresh(lot)
+    return {
+        "id": lot.id,
+        "status": lot.status,
+        "total_badges": lot.total_badges,
+        "issued": lot.issued,
+        "remaining": lot.total_badges - lot.issued,
     }
 
 
