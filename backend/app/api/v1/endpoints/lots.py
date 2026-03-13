@@ -60,7 +60,7 @@ def update_lot(lot_id: int, payload: LotUpdate, db: Session = Depends(get_db), _
         lot.total_badges = payload.total_badges
 
     if payload.status is not None:
-        if payload.status not in {"active", "paused", "revoked", "finished"}:
+        if payload.status not in {"active", "paused", "revoked", "finished", "trashed"}:
             raise HTTPException(status_code=400, detail="Status inválido")
         lot.status = payload.status
 

@@ -38,6 +38,8 @@ export default function AdminDashboard() {
   const [message, setMessage] = useState("");
   const [cnpjData, setCnpjData] = useState<CnpjData | null>(null);
   const [cnpjLoading, setCnpjLoading] = useState(false);
+  const [orgFilter, setOrgFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   async function loadData() {
     const [o, l] = await Promise.all([apiGet("/api/v1/organizations"), apiGet("/api/v1/lots")]);
@@ -118,6 +120,17 @@ export default function AdminDashboard() {
     }
   }
 
+  const filteredOrgs = orgs.filter((o) => {
+    const hit = `${o.name} ${o.document || ""}`.toLowerCase().includes(orgFilter.toLowerCase());
+    const okStatus = statusFilter === "all" ? true : o.status === statusFilter;
+    return hit && okStatus;
+  });
+
+  const kpiActiveOrgs = orgs.filter((o) => o.status === "active").length;
+  const kpiActiveLots = lots.filter((l) => l.status === "active").length;
+  const kpiIssued = lots.reduce((a, b) => a + b.issued, 0);
+  const kpiRevokedLots = lots.filter((l) => l.status === "revoked").length;
+
   return (
     <main className="container">
       <div className="header-row">
@@ -126,6 +139,16 @@ export default function AdminDashboard() {
       </div>
 
       {message && <p className={message.includes("Erro") || message.includes("Não foi") ? "error" : "success"}>{message}</p>}
+
+      <section className="card">
+        <h2>Visão rápida</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+          <div className="card" style={{ margin: 0 }}><strong>{kpiActiveOrgs}</strong><p>Organizações ativas</p></div>
+          <div className="card" style={{ margin: 0 }}><strong>{kpiActiveLots}</strong><p>Lotes ativos</p></div>
+          <div className="card" style={{ margin: 0 }}><strong>{kpiIssued}</strong><p>Badges emitidos</p></div>
+          <div className="card" style={{ margin: 0 }}><strong>{kpiRevokedLots}</strong><p>Lotes revogados</p></div>
+        </div>
+      </section>
 
       <section className="card">
         <h2>Criar Organização</h2>
@@ -174,23 +197,33 @@ export default function AdminDashboard() {
 
       <section className="card">
         <h2>Organizações</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 180px", gap: 8, marginBottom: 10 }}>
+          <input value={orgFilter} onChange={(e) => setOrgFilter(e.target.value)} placeholder="Buscar por nome ou CNPJ" />
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="all">Todos status</option>
+            <option value="active">Ativa</option>
+            <option value="inactive">Pausada</option>
+            <option value="trashed">Lixeira</option>
+          </select>
+        </div>
         <ul className="list">
-          {orgs.map((o) => (
+          {filteredOrgs.map((o, i) => (
             <li key={o.id}>
-              <Link href={`/admin/organizations/${o.id}`}>#{o.id} {o.name}</Link> <span className="muted">({o.status})</span>
+              <Link href={`/admin/organizations/${o.id}`}>{i + 1}. {o.name}</Link> <span className="muted">({o.status})</span>
             </li>
           ))}
+          {!filteredOrgs.length && <li>Nenhuma organização encontrada.</li>}
         </ul>
       </section>
 
       <section className="card">
         <h2>Lotes</h2>
         <ul className="list">
-          {lots.map((l) => {
+          {lots.map((l, i) => {
             const org = orgs.find((o) => o.id === l.organization_id);
             return (
               <li key={l.id}>
-                Lote #{l.id} | Empresa {org?.name || `#${l.organization_id}`} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
+                {i + 1}. Lote #{l.id} | Empresa {org?.name || `#${l.organization_id}`} | Status {l.status} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
               </li>
             );
           })}

@@ -10,7 +10,7 @@ type Lot = { id: number; organization_id: number; total_badges: number; issued: 
 type Note = { id: number; organization_id: number; title: string; content: string; created_at?: string };
 type Cred = { id: number; organization_id: number; lot_id: number; public_id: string; recipient_name: string; course_name: string; status: string };
 
-type TabKey = "overview" | "active" | "revoked" | "notes";
+type TabKey = "overview" | "active" | "revoked" | "notes" | "trash";
 
 export default function OrganizationDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -49,6 +49,8 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
 
   const activeLots = useMemo(() => lots.filter((l) => l.status === "active" || l.status === "paused"), [lots]);
   const revokedLots = useMemo(() => lots.filter((l) => l.status === "revoked" || l.status === "finished"), [lots]);
+  const trashedLots = useMemo(() => lots.filter((l) => l.status === "trashed"), [lots]);
+  const trashedCreds = useMemo(() => credentials.filter((c) => c.status === "trashed"), [credentials]);
 
   async function deactivateOrganization() {
     if (!org) return;
@@ -80,16 +82,27 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
 
   async function deleteOrganization() {
     if (!org) return;
-    const ack = window.prompt(`Excluir geral a organização ${org.name}. Digite EXCLUIR para confirmar:`);
+    const ack = window.prompt(`Mover organização ${org.name} para lixeira. Digite EXCLUIR para confirmar:`);
     if (ack !== "EXCLUIR") return;
 
     try {
-      await apiDelete(`/api/v1/organizations/${org.id}?force=true`);
-      setMessage("Organização excluída do sistema.");
-      setTimeout(() => router.push("/admin"), 700);
+      await apiDelete(`/api/v1/organizations/${org.id}`);
+      setMessage("Organização movida para lixeira.");
+      setOrg({ ...org, status: "trashed" });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao excluir organização.";
+      const msg = e instanceof Error ? e.message : "Erro ao mover para lixeira.";
       setMessage(msg);
+    }
+  }
+
+  async function restoreOrganization() {
+    if (!org) return;
+    try {
+      await apiPost(`/api/v1/organizations/${org.id}/restore`, {});
+      setMessage("Organização restaurada.");
+      setOrg({ ...org, status: "active" });
+    } catch {
+      setMessage("Erro ao restaurar organização.");
     }
   }
 
@@ -163,10 +176,12 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {org.status === "active" ? (
                 <button className="btn-ghost" onClick={deactivateOrganization}>Pausar organização</button>
+              ) : org.status === "trashed" ? (
+                <button className="btn-ghost" onClick={restoreOrganization}>Restaurar organização</button>
               ) : (
                 <button className="btn-ghost" onClick={activateOrganization}>Ativar organização</button>
               )}
-              <button className="btn-ghost" onClick={deleteOrganization}>Excluir geral do sistema</button>
+              <button className="btn-ghost" onClick={deleteOrganization}>Mover para lixeira</button>
             </div>
           </section>
 
@@ -176,6 +191,7 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
               <button className="btn-ghost" onClick={() => setTab("active")}>Lotes ativos</button>
               <button className="btn-ghost" onClick={() => setTab("revoked")}>Lotes revogados/finalizados</button>
               <button className="btn-ghost" onClick={() => setTab("notes")}>Anotações</button>
+              <button className="btn-ghost" onClick={() => setTab("trash")}>Lixeira</button>
             </div>
 
             {tab === "overview" && (
@@ -206,7 +222,16 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                           ) : (
                             <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "active" })}>Ativar lote</button>
                           )}
-                          <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "revoked" })}>Revogar lote</button>
+                          <button className="btn-ghost" onClick={() => {
+                            const ack = window.prompt("Digite REVOGAR para confirmar revogação do lote");
+                            if (ack !== "REVOGAR") return;
+                            updateLot(l.id, { status: "revoked" });
+                          }}>Revogar lote</button>
+                          <button className="btn-ghost" onClick={() => {
+                            const ack = window.prompt("Digite EXCLUIR para enviar lote à lixeira");
+                            if (ack !== "EXCLUIR") return;
+                            updateLot(l.id, { status: "trashed" });
+                          }}>Lixeira</button>
                         </div>
                       </div>
                     </li>
@@ -222,8 +247,17 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                         {c.recipient_name} | {c.course_name} | status: {c.status}
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
                           <button className="btn-ghost" onClick={() => updateCredential(c.id, "paused")}>Pausar</button>
-                          <button className="btn-ghost" onClick={() => updateCredential(c.id, "revoked")}>Revogar</button>
+                          <button className="btn-ghost" onClick={() => {
+                            const ack = window.prompt("Digite REVOGAR para confirmar revogação da credencial");
+                            if (ack !== "REVOGAR") return;
+                            updateCredential(c.id, "revoked");
+                          }}>Revogar</button>
                           <button className="btn-ghost" onClick={() => updateCredential(c.id, "valid")}>Ativar</button>
+                          <button className="btn-ghost" onClick={() => {
+                            const ack = window.prompt("Digite EXCLUIR para mover a credencial para lixeira");
+                            if (ack !== "EXCLUIR") return;
+                            updateCredential(c.id, "trashed");
+                          }}>Lixeira</button>
                         </div>
                       </li>
                     ))}
@@ -263,6 +297,40 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                   ))}
                   {!notesList.length && <li>Nenhuma anotação salva.</li>}
                 </ul>
+              </div>
+            )}
+
+            {tab === "trash" && (
+              <div className="form-grid">
+                <div className="card" style={{ marginBottom: 0 }}>
+                  <h2 style={{ fontSize: 16 }}>Lotes na lixeira</h2>
+                  <ul className="list">
+                    {trashedLots.map((l) => (
+                      <li key={l.id}>
+                        Lote #{l.id} | Total {l.total_badges} | Emitidos {l.issued}
+                        <div style={{ marginTop: 6 }}>
+                          <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "active" })}>Restaurar lote</button>
+                        </div>
+                      </li>
+                    ))}
+                    {!trashedLots.length && <li>Nenhum lote na lixeira.</li>}
+                  </ul>
+                </div>
+
+                <div className="card" style={{ marginBottom: 0 }}>
+                  <h2 style={{ fontSize: 16 }}>Credenciais na lixeira</h2>
+                  <ul className="list">
+                    {trashedCreds.map((c) => (
+                      <li key={c.id}>
+                        {c.recipient_name} | {c.course_name}
+                        <div style={{ marginTop: 6 }}>
+                          <button className="btn-ghost" onClick={() => updateCredential(c.id, "valid")}>Restaurar credencial</button>
+                        </div>
+                      </li>
+                    ))}
+                    {!trashedCreds.length && <li>Nenhuma credencial na lixeira.</li>}
+                  </ul>
+                </div>
               </div>
             )}
           </section>

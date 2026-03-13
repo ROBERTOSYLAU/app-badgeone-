@@ -88,7 +88,7 @@ def update_credential(credential_id: int, payload: CredentialUpdate, db: Session
     if not cred:
         raise HTTPException(status_code=404, detail="Credencial não encontrada")
 
-    if payload.status not in {"valid", "paused", "revoked"}:
+    if payload.status not in {"valid", "paused", "revoked", "trashed"}:
         raise HTTPException(status_code=400, detail="Status inválido")
 
     cred.status = payload.status

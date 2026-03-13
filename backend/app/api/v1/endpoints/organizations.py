@@ -118,16 +118,26 @@ def delete_org(org_id: int, force: bool = Query(False), db: Session = Depends(ge
     if not org:
         raise HTTPException(status_code=404, detail="Organização não encontrada")
 
-    has_lot = db.query(BadgeLot).filter(BadgeLot.organization_id == org_id).first() is not None
-    has_cred = db.query(Credential).filter(Credential.organization_id == org_id).first() is not None
+    if not force:
+        org.status = "trashed"
+        db.commit()
+        db.refresh(org)
+        return {"ok": True, "mode": "trashed", "id": org.id, "status": org.status}
 
-    if (has_lot or has_cred) and not force:
-        raise HTTPException(status_code=409, detail="Organização possui vínculos. Use force=true para exclusão total.")
-
-    if force:
-        db.query(Credential).filter(Credential.organization_id == org_id).delete(synchronize_session=False)
-        db.query(BadgeLot).filter(BadgeLot.organization_id == org_id).delete(synchronize_session=False)
-
+    db.query(Credential).filter(Credential.organization_id == org_id).delete(synchronize_session=False)
+    db.query(BadgeLot).filter(BadgeLot.organization_id == org_id).delete(synchronize_session=False)
     db.delete(org)
     db.commit()
     return {"ok": True, "mode": "deleted", "id": org_id}
+
+
+@router.post("/{org_id}/restore")
+def restore_org(org_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organização não encontrada")
+
+    org.status = "active"
+    db.commit()
+    db.refresh(org)
+    return {"ok": True, "mode": "restored", "id": org.id, "status": org.status}
