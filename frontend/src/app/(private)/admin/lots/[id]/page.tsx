@@ -26,6 +26,9 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [audit, setAudit] = useState<Audit[]>([]);
   const [auditPeriod, setAuditPeriod] = useState("all");
+  const [editTotalValue, setEditTotalValue] = useState(0);
+  const [revokeQty, setRevokeQty] = useState(1);
+  const [recoverQty, setRecoverQty] = useState(0);
   const [message, setMessage] = useState("");
 
   async function loadData() {
@@ -35,7 +38,13 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
       apiGet('/api/v1/organizations'),
       apiGet(`/api/v1/audit-logs?entity_type=lot&entity_id=${id}&period=${auditPeriod}&limit=200`),
     ]);
-    setLot((lotsData as Lot[]).find((l) => l.id === id) || null);
+    const current = (lotsData as Lot[]).find((l) => l.id === id) || null;
+    setLot(current);
+    if (current) {
+      setEditTotalValue(current.total_badges);
+      setRevokeQty(1);
+      setRecoverQty(0);
+    }
     setOrgs(orgsData as Org[]);
     setAudit(auditData as Audit[]);
   }
@@ -60,9 +69,7 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
 
   async function editTotal() {
     if (!lot) return;
-    const v = window.prompt("Novo total de badges:", String(lot.total_badges));
-    if (!v) return;
-    const n = Number(v);
+    const n = Number(editTotalValue);
     if (Number.isNaN(n)) return;
     try {
       await apiPatch(`/api/v1/lots/${lot.id}`, { total_badges: n });
@@ -92,8 +99,7 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
       return;
     }
 
-    const qtyInput = window.prompt("Quantidade a revogar (somente saldo não emitido)", "1");
-    const qty = Number(qtyInput);
+    const qty = Number(revokeQty);
     if (Number.isNaN(qty) || qty <= 0) return;
     const ack = window.prompt(`Digite REVOGAR para confirmar revogação parcial de ${qty}`);
     if (ack !== "REVOGAR") return;
@@ -153,12 +159,24 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
           <p><strong>Janela de emissão:</strong> {lot.issue_window_days} dias</p>
           <p><strong>Descrição:</strong> {lot.description || "-"}</p>
 
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-            <button className="btn-ghost" onClick={editTotal}>Editar quantidade</button>
-            <button className="btn-ghost" onClick={() => updateStatus("active")}>Ativar</button>
-            <button className="btn-ghost" onClick={() => updateStatus("paused")}>Pausar</button>
-            <button className="btn-ghost" onClick={revokeLot}>Revogar</button>
-            <button className="btn-ghost" onClick={() => updateStatus("trashed")}>Lixeira</button>
+          <div className="form-grid" style={{ marginTop: 10 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <label className="muted">Total do lote</label>
+              <input type="number" min={lot.issued} value={editTotalValue} onChange={(e) => setEditTotalValue(Number(e.target.value))} style={{ maxWidth: 140 }} />
+              <button className="btn-ghost" onClick={editTotal}>Salvar total</button>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <label className="muted">Qtd revogação parcial</label>
+              <input type="number" min={1} max={Math.max(lot.remaining, 1)} value={revokeQty} onChange={(e) => setRevokeQty(Number(e.target.value))} style={{ maxWidth: 140 }} />
+              <button className="btn-ghost" onClick={revokeLot}>Revogar</button>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button className="btn-ghost" onClick={() => updateStatus("active")}>Ativar</button>
+              <button className="btn-ghost" onClick={() => updateStatus("paused")}>Pausar</button>
+              <button className="btn-ghost" onClick={() => updateStatus("trashed")}>Lixeira</button>
+            </div>
           </div>
 
           <div className="card" style={{ marginTop: 14, marginBottom: 0 }}>

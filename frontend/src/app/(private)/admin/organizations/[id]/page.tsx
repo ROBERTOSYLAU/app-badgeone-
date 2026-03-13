@@ -260,13 +260,7 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                       <div style={{ display: "grid", gap: 6 }}>
                         <span><Link href={`/admin/lots/${l.id}`}>{l.title || `Lote #${l.id}`}</Link> | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Status {l.status}</span>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <button className="btn-ghost" onClick={() => {
-                            const v = window.prompt("Novo total de badges:", String(l.total_badges));
-                            if (!v) return;
-                            const n = Number(v);
-                            if (Number.isNaN(n)) return;
-                            updateLot(l.id, { total_badges: n });
-                          }}>Editar quantidade</button>
+                          <button className="btn-ghost" onClick={() => router.push(`/admin/lots/${l.id}`)}>Editar quantidade</button>
                           {l.status === "active" ? (
                             <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "paused" })}>Pausar lote</button>
                           ) : (
@@ -319,13 +313,7 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                   <li key={l.id}>
                     Lote #{l.id} | Status {l.status} | Emitidos {l.issued} | Total {l.total_badges}
                     <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button className="btn-ghost" onClick={() => {
-                        const v = window.prompt("Novo total de badges:", String(l.total_badges));
-                        if (!v) return;
-                        const n = Number(v);
-                        if (Number.isNaN(n)) return;
-                        updateLot(l.id, { total_badges: n });
-                      }}>Editar quantidade</button>
+                      <button className="btn-ghost" onClick={() => router.push(`/admin/lots/${l.id}`)}>Editar quantidade</button>
                       <button className="btn-ghost" onClick={() => recoverLotFlow(l)}>Recuperar lote</button>
                     </div>
                   </li>

@@ -39,6 +39,7 @@ export default function AdminLotsPage() {
   const [lots, setLots] = useState<Lot[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [status, setStatus] = useState("all");
+  const [recoverQtyByLot, setRecoverQtyByLot] = useState<Record<number, number>>({});
   const [message, setMessage] = useState("");
 
   async function loadData() {
@@ -62,8 +63,7 @@ export default function AdminLotsPage() {
     const ack = window.prompt(`Digite RECUPERAR para confirmar a recuperação do lote ${lot.title || '#' + lot.id}`);
     if (ack !== "RECUPERAR") return;
 
-    const qtyInput = window.prompt("Quantidade para recuperar (opcional, ex.: 10)", "0");
-    const qty = qtyInput && !Number.isNaN(Number(qtyInput)) ? Number(qtyInput) : 0;
+    const qty = recoverQtyByLot[lot.id] ?? 0;
 
     try {
       await apiPost(`/api/v1/lots/${lot.id}/recover`, { quantity: qty, to_status: "active" });
@@ -91,7 +91,14 @@ export default function AdminLotsPage() {
               <li key={l.id}>
                 {i + 1}. <Link href={`/admin/lots/${l.id}`}>{l.title || `Lote #${l.id}`}</Link> | Empresa {org?.name || l.organization_id} | Status {statusLabel(l.status)} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
                 {(l.status === "revoked" || l.status === "trashed") && (
-                  <div style={{ marginTop: 6 }}>
+                  <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <input
+                      type="number"
+                      min={0}
+                      value={recoverQtyByLot[l.id] ?? 0}
+                      onChange={(e) => setRecoverQtyByLot((prev) => ({ ...prev, [l.id]: Number(e.target.value) }))}
+                      style={{ maxWidth: 140 }}
+                    />
                     <button className="btn-ghost" onClick={() => restoreLot(l)}>Recuperar lote</button>
                   </div>
                 )}
