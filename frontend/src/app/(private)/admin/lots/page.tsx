@@ -2,19 +2,50 @@
 
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiGet } from "../../../../lib/api";
+import { apiGet, apiPatch } from "../../../../lib/api";
 import { getRole } from "../../../../lib/auth";
 
-type Lot = { id: number; organization_id: number; title?: string; total_badges: number; issued: number; remaining: number; status: string };
+type Lot = { id: number; organization_id: number; title?: string; description?: string; total_badges: number; issued: number; remaining: number; status: string };
 type Org = { id: number; name: string };
+
+function statusLabel(status: string) {
+  const map: Record<string, string> = {
+    active: "Ativo",
+    paused: "Pausado",
+    revoked: "Revogado",
+    finished: "Finalizado",
+    trashed: "Lixeira",
+  };
+  return map[status] || status;
+}
+
+function titleByFilter(status: string) {
+  const map: Record<string, string> = {
+    all: "Todos",
+    active: "Ativos",
+    paused: "Pausados",
+    revoked: "Revogados",
+    finished: "Finalizados",
+    trashed: "Lixeira",
+  };
+  return map[status] || status;
+}
 
 export default function AdminLotsPage() {
   const router = useRouter();
   const [lots, setLots] = useState<Lot[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [status, setStatus] = useState("all");
+  const [message, setMessage] = useState("");
+
+  async function loadData() {
+    const [l, o] = await Promise.all([apiGet('/api/v1/lots'), apiGet('/api/v1/organizations')]);
+    setLots(l);
+    setOrgs(o);
+  }
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -22,22 +53,44 @@ export default function AdminLotsPage() {
       setStatus(s);
     }
     if (getRole() !== "admin") return router.push('/login');
-    Promise.all([apiGet('/api/v1/lots'), apiGet('/api/v1/organizations')]).then(([l, o]) => { setLots(l); setOrgs(o); }).catch(() => router.push('/admin'));
+    loadData().catch(() => router.push('/admin'));
   }, [router]);
 
   const filtered = useMemo(() => status === "all" ? lots : lots.filter((l) => l.status === status), [lots, status]);
 
+  async function restoreLot(id: number) {
+    try {
+      await apiPatch(`/api/v1/lots/${id}`, { status: "active" });
+      setMessage("Lote restaurado para ativo.");
+      await loadData();
+    } catch {
+      setMessage("Erro ao restaurar lote.");
+    }
+  }
+
   return (
     <main className="container">
       <div className="header-row">
-        <h1>Lotes ({status})</h1>
+        <h1>Lotes ({titleByFilter(status)})</h1>
         <button className="btn-ghost" onClick={() => router.push('/admin')}>← Voltar</button>
       </div>
+
+      {message && <p className={message.includes("Erro") ? "error" : "success"}>{message}</p>}
+
       <section className="card">
         <ul className="list">
           {filtered.map((l, i) => {
             const org = orgs.find((o) => o.id === l.organization_id);
-            return <li key={l.id}>{i + 1}. {l.title || `Lote #${l.id}`} | Empresa {org?.name || l.organization_id} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}</li>;
+            return (
+              <li key={l.id}>
+                {i + 1}. <Link href={`/admin/lots/${l.id}`}>{l.title || `Lote #${l.id}`}</Link> | Empresa {org?.name || l.organization_id} | Status {statusLabel(l.status)} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
+                {(l.status === "revoked" || l.status === "trashed") && (
+                  <div style={{ marginTop: 6 }}>
+                    <button className="btn-ghost" onClick={() => restoreLot(l.id)}>Recuperar lote</button>
+                  </div>
+                )}
+              </li>
+            );
           })}
           {!filtered.length && <li>Nenhum lote.</li>}
         </ul>
