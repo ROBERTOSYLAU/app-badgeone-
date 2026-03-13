@@ -80,29 +80,26 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
     }
   }
 
-  async function revokeLot() {
+  async function encerrarLote() {
     if (!lot) return;
-    const mode = window.prompt("Tipo de revogação: FULL (total) ou PARTIAL (parcial)", "PARTIAL");
-    if (!mode) return;
-    const up = mode.toUpperCase();
+    const ok = window.confirm("Tem certeza que deseja encerrar (revogar total) este lote?");
+    if (!ok) return;
 
-    if (up === "FULL") {
-      const ack = window.prompt("Digite REVOGAR para confirmar revogação TOTAL");
-      if (ack !== "REVOGAR") return;
-      try {
-        await apiPost(`/api/v1/lots/${lot.id}/revoke`, { mode: "full" });
-      } catch {
-        await apiPatch(`/api/v1/lots/${lot.id}`, { status: "revoked" });
-      }
-      await loadData();
-      setMessage("Lote revogado totalmente.");
-      return;
+    try {
+      await apiPost(`/api/v1/lots/${lot.id}/revoke`, { mode: "full" });
+    } catch {
+      await apiPatch(`/api/v1/lots/${lot.id}`, { status: "revoked" });
     }
+    await loadData();
+    setMessage("Lote encerrado (sem novas emissões).");
+  }
 
+  async function reduzirSaldoParcial() {
+    if (!lot) return;
     const qty = Number(revokeQty);
     if (Number.isNaN(qty) || qty <= 0) return;
-    const ack = window.prompt(`Digite REVOGAR para confirmar revogação parcial de ${qty}`);
-    if (ack !== "REVOGAR") return;
+    const ok = window.confirm(`Confirmar redução de saldo em ${qty}?`);
+    if (!ok) return;
 
     try {
       let fallback = false;
@@ -114,21 +111,21 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
 
       if (fallback) {
         const newTotal = lot.total_badges - qty;
-        if (newTotal < lot.issued) throw new Error("Quantidade inválida para revogação parcial");
+        if (newTotal < lot.issued) throw new Error("Quantidade inválida para redução parcial");
         await apiPatch(`/api/v1/lots/${lot.id}`, { total_badges: newTotal });
       }
 
       await loadData();
-      setMessage(`Revogação parcial concluída (${qty}).`);
+      setMessage(`Redução de saldo concluída (${qty}).`);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao revogar lote.";
-      setMessage(msg.includes("Erro") ? msg : `Erro ao revogar lote: ${msg}`);
+      const msg = e instanceof Error ? e.message : "Erro ao reduzir saldo do lote.";
+      setMessage(msg.includes("Erro") ? msg : `Erro ao reduzir saldo: ${msg}`);
     }
   }
 
   async function clearAudit() {
-    const ack = window.prompt("Limpar histórico deste lote. Digite LIMPAR");
-    if (ack !== "LIMPAR") return;
+    const ok = window.confirm("Tem certeza que deseja limpar o histórico deste lote?");
+    if (!ok) return;
     try {
       await apiDelete(`/api/v1/audit-logs?entity_type=lot&entity_id=${Number(params.id)}&period=${auditPeriod}`);
       await loadData();
@@ -167,9 +164,10 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
             </div>
 
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <label className="muted">Qtd revogação parcial</label>
+              <label className="muted">Qtd para reduzir saldo</label>
               <input type="number" min={1} max={Math.max(lot.remaining, 1)} value={revokeQty} onChange={(e) => setRevokeQty(Number(e.target.value))} style={{ maxWidth: 140 }} />
-              <button className="btn-ghost" onClick={revokeLot}>Revogar</button>
+              <button className="btn-ghost" onClick={reduzirSaldoParcial}>Reduzir saldo</button>
+              <button className="btn-ghost" onClick={encerrarLote}>Encerrar lote</button>
             </div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

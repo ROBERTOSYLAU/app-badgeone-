@@ -60,8 +60,8 @@ export default function AdminLotsPage() {
   const filtered = useMemo(() => status === "all" ? lots : lots.filter((l) => l.status === status), [lots, status]);
 
   async function restoreLot(lot: Lot) {
-    const ack = window.prompt(`Digite RECUPERAR para confirmar a recuperação do lote ${lot.title || '#' + lot.id}`);
-    if (ack !== "RECUPERAR") return;
+    const ok = window.confirm(`Confirmar recuperação do lote ${lot.title || '#' + lot.id}?`);
+    if (!ok) return;
 
     const qty = recoverQtyByLot[lot.id] ?? 0;
 
