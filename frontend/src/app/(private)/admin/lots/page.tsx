@@ -58,13 +58,20 @@ export default function AdminLotsPage() {
 
   const filtered = useMemo(() => status === "all" ? lots : lots.filter((l) => l.status === status), [lots, status]);
 
-  async function restoreLot(id: number) {
+  async function restoreLot(lot: Lot) {
+    const ack = window.prompt(`Digite RECUPERAR para confirmar a recuperação do lote ${lot.title || '#' + lot.id}`);
+    if (ack !== "RECUPERAR") return;
+
+    const totalInput = window.prompt("Informe o total de badges após recuperação (opcional)", String(lot.total_badges));
+    const patch: { status: string; total_badges?: number } = { status: "active" };
+    if (totalInput && !Number.isNaN(Number(totalInput))) patch.total_badges = Number(totalInput);
+
     try {
-      await apiPatch(`/api/v1/lots/${id}`, { status: "active" });
-      setMessage("Lote restaurado para ativo.");
+      await apiPatch(`/api/v1/lots/${lot.id}`, patch);
+      setMessage("Lote recuperado com sucesso.");
       await loadData();
     } catch {
-      setMessage("Erro ao restaurar lote.");
+      setMessage("Erro ao recuperar lote.");
     }
   }
 
@@ -86,7 +93,7 @@ export default function AdminLotsPage() {
                 {i + 1}. <Link href={`/admin/lots/${l.id}`}>{l.title || `Lote #${l.id}`}</Link> | Empresa {org?.name || l.organization_id} | Status {statusLabel(l.status)} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
                 {(l.status === "revoked" || l.status === "trashed") && (
                   <div style={{ marginTop: 6 }}>
-                    <button className="btn-ghost" onClick={() => restoreLot(l.id)}>Recuperar lote</button>
+                    <button className="btn-ghost" onClick={() => restoreLot(l)}>Recuperar lote</button>
                   </div>
                 )}
               </li>

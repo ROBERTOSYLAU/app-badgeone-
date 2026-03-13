@@ -6,6 +6,7 @@ from app.core.auth import require_admin, require_issuer_or_admin
 from app.core.db import get_db
 from app.models.lot import BadgeLot
 from app.models.organization import Organization
+from app.core.audit import log_action
 
 router = APIRouter()
 
@@ -41,6 +42,8 @@ def create_lot(payload: LotCreate, db: Session = Depends(get_db), _=Depends(requ
         status="active",
     )
     db.add(lot)
+    db.flush()
+    log_action(db, "lot", lot.id, "create", f"Lote criado: total={lot.total_badges}, status={lot.status}, org={lot.organization_id}")
     db.commit()
     db.refresh(lot)
     return {
@@ -62,6 +65,8 @@ def update_lot(lot_id: int, payload: LotUpdate, db: Session = Depends(get_db), _
     if not lot:
         raise HTTPException(status_code=404, detail="Lote não encontrado")
 
+    before = f"title={lot.title}, total={lot.total_badges}, status={lot.status}"
+
     if payload.title is not None:
         lot.title = (payload.title or "").strip() or None
 
@@ -78,6 +83,8 @@ def update_lot(lot_id: int, payload: LotUpdate, db: Session = Depends(get_db), _
             raise HTTPException(status_code=400, detail="Status inválido")
         lot.status = payload.status
 
+    after = f"title={lot.title}, total={lot.total_badges}, status={lot.status}"
+    log_action(db, "lot", lot.id, "update", f"{before} -> {after}")
     db.commit()
     db.refresh(lot)
 

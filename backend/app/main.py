@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app.api.v1.router import api_router
 from app.core.db import Base, engine
-from app.models import User, Organization, BadgeLot, Credential, OrganizationNote
+from app.models import User, Organization, BadgeLot, Credential, OrganizationNote, AuditLog
 
 app = FastAPI(
     title="Badge One App API",

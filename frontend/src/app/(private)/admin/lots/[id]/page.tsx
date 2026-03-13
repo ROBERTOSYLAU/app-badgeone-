@@ -7,6 +7,7 @@ import { getRole } from "../../../../../lib/auth";
 
 type Lot = { id: number; organization_id: number; title?: string; description?: string; total_badges: number; issued: number; remaining: number; issue_window_days: number; status: string };
 type Org = { id: number; name: string };
+type Audit = { id: number; action: string; details?: string; actor?: string; created_at?: string };
 
 function statusLabel(status: string) {
   const map: Record<string, string> = {
@@ -23,12 +24,19 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [lot, setLot] = useState<Lot | null>(null);
   const [orgs, setOrgs] = useState<Org[]>([]);
+  const [audit, setAudit] = useState<Audit[]>([]);
   const [message, setMessage] = useState("");
 
   async function loadData() {
-    const [lotsData, orgsData] = await Promise.all([apiGet('/api/v1/lots'), apiGet('/api/v1/organizations')]);
-    setLot((lotsData as Lot[]).find((l) => l.id === Number(params.id)) || null);
+    const id = Number(params.id);
+    const [lotsData, orgsData, auditData] = await Promise.all([
+      apiGet('/api/v1/lots'),
+      apiGet('/api/v1/organizations'),
+      apiGet(`/api/v1/audit-logs?entity_type=lot&entity_id=${id}&limit=50`),
+    ]);
+    setLot((lotsData as Lot[]).find((l) => l.id === id) || null);
     setOrgs(orgsData as Org[]);
+    setAudit(auditData as Audit[]);
   }
 
   useEffect(() => {
@@ -91,6 +99,19 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
             <button className="btn-ghost" onClick={() => updateStatus("paused")}>Pausar</button>
             <button className="btn-ghost" onClick={() => updateStatus("revoked")}>Revogar</button>
             <button className="btn-ghost" onClick={() => updateStatus("trashed")}>Lixeira</button>
+          </div>
+
+          <div className="card" style={{ marginTop: 14, marginBottom: 0 }}>
+            <h2 style={{ fontSize: 16 }}>Histórico de ações do lote</h2>
+            <ul className="list">
+              {audit.map((a) => (
+                <li key={a.id}>
+                  <strong>{a.action}</strong> <span className="muted">({a.created_at?.replace('T', ' ').slice(0, 19) || '-'})</span>
+                  {a.details ? <p>{a.details}</p> : null}
+                </li>
+              ))}
+              {!audit.length && <li>Sem histórico ainda.</li>}
+            </ul>
           </div>
         </section>
       )}
