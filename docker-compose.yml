@@ -25,8 +25,9 @@ services:
       - postgres
       - redis
     environment:
-      DATABASE_URL: postgres://badgeone:badgeone@postgres:5432/badgeone
+      DATABASE_URL: postgresql+psycopg://badgeone:badgeone@postgres:5432/badgeone
       REDIS_URL: redis://redis:6379
+      APP_ENV: production
 
   frontend:
     build: ./frontend

@@ -21,6 +21,12 @@ Subir tudo por Docker (frontend + backend + db + redis + nginx):
 docker compose up -d --build
 ```
 
+### Hardening de deploy (importante)
+
+- Frontend roda em `3001`, então o Nginx deve apontar para `frontend:3001`.
+- Use `DATABASE_URL` com `postgresql+psycopg://...` (não use `postgres://...`).
+- Veja checklist rápido em `DEPLOY.md`.
+
 Acesso local:
 - App: `http://localhost`
 - API health: `http://localhost/health`
