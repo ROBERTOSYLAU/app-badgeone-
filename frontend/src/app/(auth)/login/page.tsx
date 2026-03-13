@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { setSession } from "../../../lib/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api";
 
@@ -42,8 +43,7 @@ export default function LoginPage() {
       }
 
       const data = await res.json();
-      localStorage.setItem("badgeone_token", data.access_token);
-      localStorage.setItem("badgeone_role", data.role);
+      setSession(data);
 
       if (data.role === "admin") router.push("/admin");
       else router.push("/issuer");

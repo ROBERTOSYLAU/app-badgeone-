@@ -17,6 +17,7 @@ class UserCreate(BaseModel):
     password: str
     role: str = "issuer"
     organization_id: int | None = None
+    status: str = "active"
 
 
 @router.post("")
@@ -26,6 +27,9 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), _=Depends(re
 
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=409, detail="E-mail já cadastrado")
+
+    if payload.role == "issuer" and payload.organization_id is None:
+        raise HTTPException(status_code=400, detail="Emissor deve estar vinculado a uma organização")
 
     if payload.organization_id is not None:
         org = db.query(Organization).filter(Organization.id == payload.organization_id).first()
@@ -37,6 +41,7 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), _=Depends(re
         email=payload.email,
         password_hash=hash_password(payload.password),
         role=payload.role,
+        status=payload.status if payload.status in {"active", "inactive"} else "active",
         organization_id=payload.organization_id,
     )
     db.add(user)
@@ -48,6 +53,7 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), _=Depends(re
         "name": user.name,
         "email": user.email,
         "role": user.role,
+        "status": user.status,
         "organization_id": user.organization_id,
     }
 
@@ -61,6 +67,7 @@ def list_users(db: Session = Depends(get_db), _=Depends(require_admin)):
             "name": u.name,
             "email": u.email,
             "role": u.role,
+            "status": u.status,
             "organization_id": u.organization_id,
         }
         for u in users

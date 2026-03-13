@@ -14,6 +14,7 @@ export async function apiGet(path: string) {
   const res = await fetch(apiUrl(path), {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     cache: "no-store",
+    credentials: "include",
   });
   if (!res.ok) throw new Error(`GET ${path} failed`);
   return res.json();
@@ -23,6 +24,7 @@ export async function apiPost(path: string, body: unknown) {
   const token = getToken();
   const res = await fetch(apiUrl(path), {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -44,6 +46,7 @@ export async function apiDelete(path: string) {
   const token = getToken();
   const res = await fetch(apiUrl(path), {
     method: "DELETE",
+    credentials: "include",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) {
@@ -61,6 +64,7 @@ export async function apiPatch(path: string, body: unknown) {
   const token = getToken();
   const res = await fetch(apiUrl(path), {
     method: "PATCH",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

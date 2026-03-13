@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.auth import require_admin, require_issuer_or_admin
+from app.models.user import User
 from app.core.db import get_db
 from app.models.organization import Organization
 from app.models.lot import BadgeLot
@@ -60,8 +61,13 @@ def create_org(payload: OrganizationCreate, db: Session = Depends(get_db), _=Dep
 
 
 @router.get("")
-def list_orgs(db: Session = Depends(get_db), _=Depends(require_issuer_or_admin)):
-    data = db.query(Organization).order_by(Organization.id.desc()).all()
+def list_orgs(db: Session = Depends(get_db), user: User = Depends(require_issuer_or_admin)):
+    q = db.query(Organization)
+    if user.role == "issuer":
+        if user.organization_id is None:
+            return []
+        q = q.filter(Organization.id == user.organization_id)
+    data = q.order_by(Organization.id.desc()).all()
     return [{"id": x.id, "name": x.name, "document": x.document, "status": x.status} for x in data]
 
 

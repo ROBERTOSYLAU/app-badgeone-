@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_admin, require_issuer_or_admin
+from app.core.auth import require_admin, require_issuer_or_admin, enforce_org_access
+from app.models.user import User
 from app.core.db import get_db
 from app.models.lot import BadgeLot
 from app.models.organization import Organization
@@ -37,7 +38,7 @@ class LotRecoverRequest(BaseModel):
 
 
 @router.post("")
-def create_lot(payload: LotCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+def create_lot(payload: LotCreate, db: Session = Depends(get_db), user: User = Depends(require_admin)):
     org = db.query(Organization).filter(Organization.id == payload.organization_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organização não encontrada")
@@ -94,7 +95,8 @@ def update_lot(lot_id: int, payload: LotUpdate, db: Session = Depends(get_db), _
         lot.status = payload.status
 
     after = f"title={lot.title}, total={lot.total_badges}, status={lot.status}"
-    log_action(db, "lot", lot.id, "update", f"{before} -> {after}")
+    if before != after:
+        log_action(db, "lot", lot.id, "update", f"{before} -> {after}")
     db.commit()
     db.refresh(lot)
 
@@ -173,8 +175,13 @@ def recover_lot(lot_id: int, payload: LotRecoverRequest, db: Session = Depends(g
 
 
 @router.get("")
-def list_lots(db: Session = Depends(get_db), _=Depends(require_issuer_or_admin)):
-    data = db.query(BadgeLot).order_by(BadgeLot.id.desc()).all()
+def list_lots(db: Session = Depends(get_db), user: User = Depends(require_issuer_or_admin)):
+    q = db.query(BadgeLot)
+    if user.role == "issuer":
+        if user.organization_id is None:
+            return []
+        q = q.filter(BadgeLot.organization_id == user.organization_id)
+    data = q.order_by(BadgeLot.id.desc()).all()
     return [
         {
             "id": x.id,

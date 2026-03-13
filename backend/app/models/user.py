@@ -10,4 +10,5 @@ class User(Base):
     name = Column(String(120), nullable=False)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False, default="issuer")
+    status = Column(String(20), nullable=False, default="active")
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)

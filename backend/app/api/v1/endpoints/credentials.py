@@ -3,7 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
-from app.core.auth import require_issuer_or_admin, require_admin
+from app.core.auth import require_issuer_or_admin, require_admin, enforce_org_access
+from app.models.user import User
 from app.core.db import get_db
 from app.models.lot import BadgeLot
 from app.models.organization import Organization
@@ -27,7 +28,9 @@ class CredentialUpdate(BaseModel):
 
 
 @router.post("/issue")
-def issue_credential(payload: IssueCredentialRequest, db: Session = Depends(get_db), _=Depends(require_issuer_or_admin)):
+def issue_credential(payload: IssueCredentialRequest, db: Session = Depends(get_db), user: User = Depends(require_issuer_or_admin)):
+    enforce_org_access(user, payload.organization_id)
+
     org = db.query(Organization).filter(Organization.id == payload.organization_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organização não encontrada")
@@ -37,6 +40,10 @@ def issue_credential(payload: IssueCredentialRequest, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="Lote não encontrado para organização")
 
     remaining = lot.total_badges - lot.issued
+    if lot.status in {"paused", "revoked", "finished", "trashed"}:
+        raise HTTPException(status_code=400, detail="Lote indisponível para emissão")
+    if org.status in {"inactive", "trashed"}:
+        raise HTTPException(status_code=400, detail="Organização indisponível para operação")
     if remaining <= 0:
         raise HTTPException(status_code=400, detail="Lote sem saldo")
 
@@ -120,9 +127,13 @@ def verify_credential(public_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("")
-def list_credentials(organization_id: int | None = Query(None), db: Session = Depends(get_db), _=Depends(require_issuer_or_admin)):
+def list_credentials(organization_id: int | None = Query(None), db: Session = Depends(get_db), user: User = Depends(require_issuer_or_admin)):
     q = db.query(Credential)
-    if organization_id is not None:
+    if user.role == "issuer":
+        if user.organization_id is None:
+            return []
+        q = q.filter(Credential.organization_id == user.organization_id)
+    elif organization_id is not None:
         q = q.filter(Credential.organization_id == organization_id)
     data = q.order_by(Credential.id.desc()).limit(300).all()
     return [

@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -10,14 +10,26 @@ from app.models.user import User
 security = HTTPBearer(auto_error=False)
 
 
+def _extract_token(request: Request, credentials: HTTPAuthorizationCredentials | None) -> str | None:
+    if credentials is not None:
+        return credentials.credentials
+
+    cookie_token = request.cookies.get(settings.auth_cookie_name)
+    if cookie_token:
+        return cookie_token
+
+    return None
+
+
 def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
-    if credentials is None:
+    token = _extract_token(request, credentials)
+    if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Não autenticado")
 
-    token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         user_id = int(payload.get("sub"))
@@ -40,3 +52,11 @@ def require_issuer_or_admin(user: User = Depends(get_current_user)) -> User:
     if user.role not in {"admin", "issuer"}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado")
     return user
+
+
+def enforce_org_access(user: User, organization_id: int):
+    if user.role == "admin":
+        return
+
+    if user.organization_id is None or user.organization_id != organization_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso negado para esta organização")

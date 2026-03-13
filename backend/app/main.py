@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app.api.v1.router import api_router
 from app.core.db import Base, engine
+from app.core.config import settings
 from app.models import User, Organization, BadgeLot, Credential, OrganizationNote, AuditLog
 
 app = FastAPI(
@@ -11,9 +12,11 @@ app = FastAPI(
     description="API do SaaS Badge One (Sprint 1)",
 )
 
+allowed_origins = [x.strip() for x in settings.cors_origins.split(",") if x.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -29,6 +32,7 @@ def startup():
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE badge_lots ADD COLUMN IF NOT EXISTS title VARCHAR(180)"))
             conn.execute(text("ALTER TABLE badge_lots ADD COLUMN IF NOT EXISTS description VARCHAR(500)"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'"))
     except Exception:
         pass
 
