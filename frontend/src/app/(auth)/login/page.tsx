@@ -1,20 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
-import { setSession } from "../../../lib/auth";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "/api";
-
-function apiUrl(path: string) {
-  if (API_BASE.endsWith("/api") && path.startsWith("/api/")) {
-    return `${API_BASE}${path.slice(4)}`;
-  }
-  return `${API_BASE}${path}`;
-}
+import { useAuth } from "../../../lib/auth-context";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,63 +21,76 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(apiUrl(`/api/v1/auth/login`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!res.ok) {
-        setError("Login inválido.");
-        return;
-      }
-
-      const data = await res.json();
-      setSession(data);
-
-      if (data.role === "admin") router.push("/admin");
-      else router.push("/issuer");
-    } catch {
-      setError("Falha de conexão com o servidor.");
+      await login(email, password);
+    } catch (err: any) {
+      setError(err.message || "Credenciais inválidas. Tente novamente.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="centered">
-      <section className="card">
-        <h1>Entrar no sistema</h1>
-        <p>Acesso de sessão (Admin e Emissor).</p>
-        <p><a href="/">← Voltar para seleção de acesso</a></p>
-        <p className="muted" style={{ fontSize: 13 }}>Dica dev: crie admin via POST /api/v1/auth/seed-admin</p>
+    <main className="login-page">
+      <div className="login-container">
+        <div className="login-brand">
+          <div className="logo">🏅</div>
+          <h1>Badge One</h1>
+          <p className="tagline">Plataforma de credenciamento digital</p>
+        </div>
 
-        <form className="form-grid" onSubmit={onSubmit}>
-          <label>E-mail</label>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="seu@email.com"
-            type="email"
-            autoComplete="email"
-          />
+        <div className="login-card">
+          <h2>Bem-vindo de volta</h2>
+          <p className="subtitle">Acesse sua conta para gerenciar badges e credenciais</p>
 
-          <label>Senha</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            autoComplete="current-password"
-          />
+          <form onSubmit={onSubmit} className="login-form">
+            <div className="input-group">
+              <label htmlFor="email">E-mail</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                autoComplete="email"
+                disabled={loading}
+              />
+            </div>
 
-          {error && <p className="error">{error}</p>}
+            <div className="input-group">
+              <label htmlFor="password">Senha</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                disabled={loading}
+              />
+            </div>
 
-          <button type="submit" disabled={loading}>
-            {loading ? "Entrando..." : "Entrar"}
-          </button>
-        </form>
-      </section>
+            {error && (
+              <div className="error-message">
+                <span>⚠️</span> {error}
+              </div>
+            )}
+
+            <button type="submit" className="login-button" disabled={loading}>
+              {loading ? (
+                <>
+                  <span className="spinner-small" /> Entrando...
+                </>
+              ) : (
+                "Entrar no sistema"
+              )}
+            </button>
+          </form>
+
+          <div className="login-footer">
+            <p>Ambiente seguro • Acesso restrito</p>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

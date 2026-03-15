@@ -118,6 +118,37 @@ def me(request_user: User = Depends(get_current_user), db: Session = Depends(get
     return _build_login_payload(request_user, db, token)
 
 
+@router.get("/onboarding-status")
+def onboarding_status(db: Session = Depends(get_db), user: User = Depends(require_admin)):
+    """Retorna status do onboarding para guiar primeiro acesso do admin."""
+    from app.models.lot import BadgeLot
+    from app.models.credential import Credential
+    
+    org_count = db.query(Organization).count()
+    user_count = db.query(User).filter(User.role == "issuer").count()
+    lot_count = db.query(BadgeLot).count()
+    cred_count = db.query(Credential).count()
+    
+    return {
+        "has_organization": org_count > 0,
+        "has_issuer_user": user_count > 0,
+        "has_lot": lot_count > 0,
+        "has_emission": cred_count > 0,
+        "organization_count": org_count,
+        "issuer_count": user_count,
+        "lot_count": lot_count,
+        "emission_count": cred_count,
+        "completed": org_count > 0 and user_count > 0 and lot_count > 0 and cred_count > 0,
+        "next_step": (
+            "create_organization" if org_count == 0 else
+            "create_issuer" if user_count == 0 else
+            "create_lot" if lot_count == 0 else
+            "emit_badge" if cred_count == 0 else
+            "completed"
+        )
+    }
+
+
 @router.post("/reset-admin")
 def reset_admin(payload: SeedAdminRequest, db: Session = Depends(get_db)):
     if settings.app_env == "production":
