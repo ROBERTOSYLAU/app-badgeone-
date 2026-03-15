@@ -91,7 +91,7 @@ export default function AdminOrganizationsPage() {
     setMessage("");
     try {
       const data = await apiGet(`/api/v1/organizations/cnpj/${cleanCnpj}`);
-      setName(data.nome || "");
+      setName(data.razao_social || data.nome_fantasia || "");
       setDocument(cleanCnpj);
       setAddress(`${data.logradouro}, ${data.numero} - ${data.bairro}, ${data.municipio} - ${data.uf}, ${data.cep}`);
       setCnae(data.cnae_fiscal_descricao || "");
