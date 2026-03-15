@@ -1,47 +1,47 @@
-# BadgeOne AI Instructions
+# Instruções de IA do BadgeOne
 
-Project: BadgeOne
+Projeto: BadgeOne
 
-Purpose:
-BadgeOne allows organizations to create and issue digital badges for users.
+Propósito:
+O BadgeOne permite que organizações criem e emitam badges (credenciais digitais) para usuários.
 
-Main architecture:
+Arquitetura principal:
 
 Frontend
 - React
-- Admin dashboard
-- Organization login
+- Painel administrativo
+- Login de organizações
 
 Backend
-- Node.js API
-- JWT authentication
-- Badge issuing endpoints
+- API em Node.js
+- Autenticação com JWT
+- Endpoints para emissão de badges
 
-Infrastructure
+Infraestrutura
 - Docker
-- Nginx reverse proxy
-- PostgreSQL database
+- Nginx como proxy reverso
+- Banco de dados PostgreSQL
 
-Main folders:
+Principais pastas:
 
 frontend/
-User interface and admin dashboard.
+Interface do usuário e painel administrativo.
 
 backend/
-API services, authentication and badge issuing.
+Serviços da API, autenticação e emissão de badges.
 
 docs/
-Project documentation.
+Documentação do projeto.
 
 nginx/
-Reverse proxy configuration.
+Configuração do proxy reverso.
 
-Important rules for AI modifications:
+Regras importantes para modificações feitas pela IA:
 
-1. Do not break Docker configuration
-2. Maintain API routes under /api
-3. Frontend must remain responsive
-4. Authentication must use JWT
+1. Não quebrar a configuração do Docker
+2. Manter as rotas da API sob o prefixo /api
+3. O frontend deve permanecer responsivo
+4. A autenticação deve utilizar JWT
 
-Goal:
-Assist development of the BadgeOne platform.
+Objetivo:
+Auxiliar no desenvolvimento da plataforma BadgeOne.
