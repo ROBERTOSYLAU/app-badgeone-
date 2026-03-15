@@ -94,33 +94,17 @@ export default function AdminDashboard() {
         </div>
       </section>
 
-      {/* Botão Tutorial */}
-      <section className="card" style={{ textAlign: "center", padding: 16 }}>
-        <button 
-          onClick={() => router.push("/admin/tutorial")} 
-          className="btn-ghost"
-          style={{ width: "auto", padding: "10px 24px" }}
-        >
-          📖 Ver Tutorial de Primeiros Passos
-        </button>
-      </section>
-
-
-
       {/* Quick Actions */}
       <section className="card">
         <h2>Ações Rápidas</h2>
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <button onClick={() => router.push("/admin/organizations")}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+          <button type="button" onClick={() => router.push("/admin/organizations")}>
             🏢 Gerenciar Organizações
           </button>
-          <button onClick={() => router.push("/admin/users")}>
-            👤 Criar Usuário Emissor
-          </button>
-          <button onClick={() => router.push("/admin/lots")}>
+          <button type="button" onClick={() => router.push("/admin/lots")}>
             📦 Criar Lote
           </button>
-          <button onClick={() => router.push("/admin/audit")}>
+          <button type="button" onClick={() => router.push("/admin/audit")}>
             📋 Ver Auditoria
           </button>
         </div>
