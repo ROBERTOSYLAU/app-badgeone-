@@ -102,6 +102,7 @@ export default function LoginPage() {
                     padding: "4px 8px",
                     width: "auto",
                   }}
+                  tabIndex={-1}
                 >
                   {showPassword ? "🙈" : "👁️"}
                 </button>
