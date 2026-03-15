@@ -119,8 +119,8 @@ export default function AdminDashboard() {
           <p>Siga os passos abaixo para configurar sua plataforma:</p>
           
           {steps.map((step, index) => {
-            const completed = onboarding[step.key as keyof OnboardingStatus] as boolean;
-            const isNext = onboarding.next_step === step.key.replace("has_", "").replace("_user", "");
+            const completed = onboarding ? (onboarding[step.key as keyof OnboardingStatus] as boolean) : false;
+            const isNext = onboarding?.next_step === step.key.replace("has_", "").replace("_user", "");
             
             return (
               <div
