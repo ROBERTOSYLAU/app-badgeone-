@@ -6,23 +6,24 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiGet } from "../../../../lib/api";
-import { getRole } from "../../../../lib/auth";
+import { useAuth } from "../../../../lib/auth-context";
 
 type Org = { id: number; name: string; document?: string; status: string };
 
 export default function AdminOrganizationsPage() {
   const router = useRouter();
+  const { user, isLoading } = useAuth();
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [status, setStatus] = useState("all");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const s = new URLSearchParams(window.location.search).get("status") || "all";
-      setStatus(s);
+    if (isLoading) return;
+    if (!user || user.role !== "admin") {
+      router.push("/login");
+      return;
     }
-    if (getRole() !== "admin") return router.push("/login");
-    apiGet("/api/v1/organizations").then(setOrgs).catch(() => router.push("/admin"));
-  }, [router]);
+    apiGet("/api/v1/organizations").then(setOrgs).catch(() => {});
+  }, [user, isLoading, router]);
 
   const filtered = useMemo(() => status === "all" ? orgs : orgs.filter((o) => o.status === status), [orgs, status]);
 
