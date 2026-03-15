@@ -80,23 +80,23 @@ export default function AdminDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <section className="card">
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
-          <div className="card" style={{ margin: 0, cursor: "pointer" }} onClick={() => router.push("/admin/organizations")}>
-            <h3 style={{ margin: "0 0 8px", fontSize: 32, color: "var(--primary)" }}>{kpiActiveOrgs}</h3>
-            <p style={{ margin: 0 }}>Organizações Ativas</p>
+      <section className="card" style={{ padding: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+          <div className="card" style={{ margin: 0, cursor: "pointer", padding: 14 }} onClick={() => router.push("/admin/organizations")}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 24, color: "var(--primary)" }}>{kpiActiveOrgs}</h3>
+            <p style={{ margin: 0, fontSize: 12 }}>Organizações</p>
           </div>
-          <div className="card" style={{ margin: 0, cursor: "pointer" }} onClick={() => router.push("/admin/lots")}>
-            <h3 style={{ margin: "0 0 8px", fontSize: 32, color: "var(--success)" }}>{onboarding?.lot_count || 0}</h3>
-            <p style={{ margin: 0 }}>Lotes</p>
+          <div className="card" style={{ margin: 0, cursor: "pointer", padding: 14 }} onClick={() => router.push("/admin/lots")}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 24, color: "var(--success)" }}>{onboarding?.lot_count || 0}</h3>
+            <p style={{ margin: 0, fontSize: 12 }}>Lotes</p>
           </div>
-          <div className="card" style={{ margin: 0, cursor: "pointer" }} onClick={() => router.push("/admin/emissions")}>
-            <h3 style={{ margin: "0 0 8px", fontSize: 32, color: "#fbbf24" }}>{kpiIssued}</h3>
-            <p style={{ margin: 0 }}>Badges Emitidos</p>
+          <div className="card" style={{ margin: 0, cursor: "pointer", padding: 14 }} onClick={() => router.push("/admin/emissions")}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 24, color: "#fbbf24" }}>{kpiIssued}</h3>
+            <p style={{ margin: 0, fontSize: 12 }}>Badges</p>
           </div>
-          <div className="card" style={{ margin: 0, cursor: "pointer" }} onClick={() => router.push("/admin/users")}>
-            <h3 style={{ margin: "0 0 8px", fontSize: 32, color: "#a78bfa" }}>{onboarding?.issuer_count || 0}</h3>
-            <p style={{ margin: 0 }}>Emissores</p>
+          <div className="card" style={{ margin: 0, cursor: "pointer", padding: 14 }} onClick={() => router.push("/admin/users")}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 24, color: "#a78bfa" }}>{onboarding?.issuer_count || 0}</h3>
+            <p style={{ margin: 0, fontSize: 12 }}>Emissores</p>
           </div>
         </div>
       </section>
