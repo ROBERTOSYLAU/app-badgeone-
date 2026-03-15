@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.db import get_db
 from app.core.security import verify_password, create_access_token, hash_password
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, require_admin
 from app.models.user import User
 from app.models.organization import Organization
 
