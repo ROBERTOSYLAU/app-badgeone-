@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "../../../lib/auth-context";
 
 export default function LoginPage() {
@@ -39,8 +40,24 @@ export default function LoginPage() {
         </div>
 
         <div className="login-card">
-          <h2>Bem-vindo de volta</h2>
-          <p className="subtitle">Acesse sua conta para gerenciar badges e credenciais</p>
+          <h2>Acesso ao Sistema</h2>
+          <p className="subtitle">Escolha seu perfil de acesso</p>
+
+          {/* Opções de acesso */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 24 }}>
+            <Link href="/login" className="btn-active" style={{ textAlign: "center", padding: "12px" }}>
+              👤 Admin
+            </Link>
+            <Link href="/login" className="btn-ghost" style={{ textAlign: "center", padding: "12px" }}>
+              🏢 Emissor
+            </Link>
+            <Link href="/winner" className="btn-ghost" style={{ textAlign: "center", padding: "12px" }}>
+              🏆 Ganhador
+            </Link>
+            <Link href="/verify/demo-credential" className="btn-ghost" style={{ textAlign: "center", padding: "12px" }}>
+              🔍 Público
+            </Link>
+          </div>
 
           <form onSubmit={onSubmit} className="login-form">
             <div className="input-group">
