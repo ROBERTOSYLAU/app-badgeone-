@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../../../lib/api";
-import { getRole, logout } from "../../../../../lib/auth";
+import { useAuth } from "../../../../../lib/auth-context";
 
 type Org = { id: number; name: string; document?: string; status: string };
 type Lot = { id: number; organization_id: number; title?: string; description?: string; total_badges: number; issued: number; remaining: number; issue_window_days: number; status: string };
@@ -37,6 +37,7 @@ type TabKey = "overview" | "active" | "revoked" | "notes" | "trash";
 
 export default function OrganizationDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { user, isLoading, logout } = useAuth();
   const [org, setOrg] = useState<Org | null>(null);
   const [lots, setLots] = useState<Lot[]>([]);
   const [notesList, setNotesList] = useState<Note[]>([]);
@@ -62,13 +63,13 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
   }
 
   useEffect(() => {
-    if (getRole() !== "admin") {
+    if (isLoading) return;
+    if (!user || user.role !== "admin") {
       router.push("/login");
       return;
     }
-
     loadAll().catch(() => router.push("/admin"));
-  }, [orgId, router]);
+  }, [user, isLoading, orgId, router]);
 
   const activeLots = useMemo(() => lots.filter((l) => l.status === "active" || l.status === "paused"), [lots]);
   const revokedLots = useMemo(() => lots.filter((l) => l.status === "revoked" || l.status === "finished"), [lots]);
