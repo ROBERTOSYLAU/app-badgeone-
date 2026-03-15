@@ -8,6 +8,28 @@ import { getRole, logout } from "../../../../../lib/auth";
 
 type Org = { id: number; name: string; document?: string; status: string };
 type Lot = { id: number; organization_id: number; title?: string; description?: string; total_badges: number; issued: number; remaining: number; issue_window_days: number; status: string };
+
+function getStatusColor(status: string) {
+  switch (status) {
+    case "active": return "#22c55e"; // verde
+    case "paused": return "#f59e0b"; // amarelo
+    case "revoked": return "#ef4444"; // vermelho
+    case "finished": return "#6b7280"; // cinza
+    case "trashed": return "#374151"; // cinza escuro
+    default: return "#9ca3af";
+  }
+}
+
+function getStatusLabel(status: string) {
+  const map: Record<string, string> = {
+    active: "Ativo",
+    paused: "Pausado",
+    revoked: "Revogado",
+    finished: "Finalizado",
+    trashed: "Lixeira",
+  };
+  return map[status] || status;
+}
 type Note = { id: number; organization_id: number; title: string; content: string; created_at?: string };
 type Cred = { id: number; organization_id: number; lot_id: number; public_id: string; recipient_name: string; course_name: string; status: string };
 
@@ -238,11 +260,15 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                   <p><strong>Saldo total:</strong> {lots.reduce((a, b) => a + b.remaining, 0)}</p>
                 </div>
                 <div className="card" style={{ marginBottom: 0 }}>
-                  <h2 style={{ fontSize: 16 }}>Detalhe dos lotes da organização</h2>
+                  <h2 style={{ fontSize: 16 }}>Lotes da organização ({lots.length})</h2>
                   <ul className="list">
                     {lots.map((l, i) => (
                       <li key={l.id}>
-                        {i + 1}. {l.title || `Lote #${l.id}`} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
+                        {i + 1}. <Link className="lot-title-highlight" href={`/admin/lots/${l.id}`}>{l.title || `Lote #${l.id}`}</Link>
+                        <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 4, fontSize: 12, background: getStatusColor(l.status) + "20", color: getStatusColor(l.status), border: `1px solid ${getStatusColor(l.status)}` }}>
+                          {getStatusLabel(l.status)}
+                        </span>
+                        <span className="muted"> | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}</span>
                         {l.description ? <p className="muted">{l.description}</p> : null}
                       </li>
                     ))}
@@ -258,7 +284,13 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                   {activeLots.map((l) => (
                     <li key={l.id}>
                       <div style={{ display: "grid", gap: 6 }}>
-                        <span><Link className="lot-title-highlight" href={`/admin/lots/${l.id}`}>{(l.title || `Lote #${l.id}`).toUpperCase()}</Link> | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Status {l.status}</span>
+                        <span>
+                          <Link className="lot-title-highlight" href={`/admin/lots/${l.id}`}>{(l.title || `Lote #${l.id}`).toUpperCase()}</Link>
+                          <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 4, fontSize: 12, background: getStatusColor(l.status) + "20", color: getStatusColor(l.status), border: `1px solid ${getStatusColor(l.status)}` }}>
+                            {getStatusLabel(l.status)}
+                          </span>
+                          <span className="muted"> | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}</span>
+                        </span>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                           <button className="btn-ghost" onClick={() => router.push(`/admin/lots/${l.id}`)}>Editar quantidade</button>
                           {l.status === "active" ? (
@@ -311,7 +343,11 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
               <ul className="list">
                 {revokedLots.map((l) => (
                   <li key={l.id}>
-                    Lote #{l.id} | Status {l.status} | Emitidos {l.issued} | Total {l.total_badges}
+                    <Link className="lot-title-highlight" href={`/admin/lots/${l.id}`}>{l.title || `Lote #${l.id}`}</Link>
+                    <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 4, fontSize: 12, background: getStatusColor(l.status) + "20", color: getStatusColor(l.status), border: `1px solid ${getStatusColor(l.status)}` }}>
+                      {getStatusLabel(l.status)}
+                    </span>
+                    <span className="muted"> | Emitidos {l.issued} | Total {l.total_badges}</span>
                     <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <button className="btn-ghost" onClick={() => router.push(`/admin/lots/${l.id}`)}>Editar quantidade</button>
                       <button className="btn-ghost" onClick={() => recoverLotFlow(l)}>Recuperar lote</button>
@@ -353,7 +389,11 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                   <ul className="list">
                     {trashedLots.map((l) => (
                       <li key={l.id}>
-                        Lote #{l.id} | Total {l.total_badges} | Emitidos {l.issued}
+                        <Link className="lot-title-highlight" href={`/admin/lots/${l.id}`}>{l.title || `Lote #${l.id}`}</Link>
+                        <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 4, fontSize: 12, background: getStatusColor(l.status) + "20", color: getStatusColor(l.status), border: `1px solid ${getStatusColor(l.status)}` }}>
+                          {getStatusLabel(l.status)}
+                        </span>
+                        <span className="muted"> | Total {l.total_badges} | Emitidos {l.issued}</span>
                         <div style={{ marginTop: 6 }}>
                           <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "active" })}>Restaurar lote</button>
                         </div>

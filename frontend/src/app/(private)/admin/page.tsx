@@ -87,8 +87,8 @@ export default function AdminDashboard() {
             <p style={{ margin: 0 }}>Organizações Ativas</p>
           </div>
           <div className="card" style={{ margin: 0, cursor: "pointer" }} onClick={() => router.push("/admin/lots")}>
-            <h3 style={{ margin: "0 0 8px", fontSize: 32, color: "var(--success)" }}>{kpiActiveLots}</h3>
-            <p style={{ margin: 0 }}>Lotes Ativos</p>
+            <h3 style={{ margin: "0 0 8px", fontSize: 32, color: "var(--success)" }}>{onboarding?.lot_count || 0}</h3>
+            <p style={{ margin: 0 }}>Lotes</p>
           </div>
           <div className="card" style={{ margin: 0, cursor: "pointer" }} onClick={() => router.push("/admin/emissions")}>
             <h3 style={{ margin: "0 0 8px", fontSize: 32, color: "#fbbf24" }}>{kpiIssued}</h3>

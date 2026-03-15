@@ -20,6 +20,34 @@ function statusLabel(status: string) {
   return map[status] || status;
 }
 
+function translateAction(action: string): string {
+  const map: Record<string, string> = {
+    create: "Criação",
+    update: "Atualização",
+    delete: "Exclusão",
+    revoke_full: "Revogação total",
+    revoke_partial: "Revogação parcial",
+    recover: "Recuperação",
+    activate: "Ativação",
+    deactivate: "Desativação",
+    pause: "Pausa",
+    restore: "Restauração",
+  };
+  return map[action] || action;
+}
+
+function getActionIcon(action: string): string {
+  if (action.includes("create")) return "➕";
+  if (action.includes("update")) return "✏️";
+  if (action.includes("delete")) return "🗑️";
+  if (action.includes("revoke")) return "🚫";
+  if (action.includes("recover")) return "♻️";
+  if (action.includes("activate")) return "✅";
+  if (action.includes("deactivate")) return "⏸️";
+  if (action.includes("restore")) return "🔄";
+  return "📝";
+}
+
 export default function LotDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [lot, setLot] = useState<Lot | null>(null);
@@ -192,8 +220,11 @@ export default function LotDetailsPage({ params }: { params: { id: string } }) {
             <ul className="list">
               {audit.map((a) => (
                 <li key={a.id}>
-                  <strong>{a.action}</strong> <span className="muted">({a.created_at?.replace('T', ' ').slice(0, 19) || '-'})</span>
-                  {a.details ? <p>{a.details}</p> : null}
+                  <span style={{ marginRight: 8 }}>{getActionIcon(a.action)}</span>
+                  <strong>{translateAction(a.action)}</strong>
+                  <span className="muted" style={{ marginLeft: 8 }}>({a.created_at?.replace('T', ' ').slice(0, 19) || '-'})</span>
+                  {a.actor && <span className="muted"> por {a.actor}</span>}
+                  {a.details ? <p style={{ marginTop: 4, fontSize: 13 }}>{a.details}</p> : null}
                 </li>
               ))}
               {!audit.length && <li>Sem histórico ainda.</li>}
