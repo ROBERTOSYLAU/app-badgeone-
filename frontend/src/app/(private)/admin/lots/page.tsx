@@ -78,7 +78,7 @@ export default function AdminLotsPage() {
     <main className="container">
       <div className="header-row">
         <h1>Lotes ({titleByFilter(status)})</h1>
-        <button className="btn-ghost" onClick={() => router.push('/admin')}>← Voltar</button>
+        <button className="btn-ghost" onClick={() => router.back()}>← Voltar</button>
       </div>
 
       {message && <p className={message.includes("Erro") ? "error" : "success"}>{message}</p>}

@@ -145,7 +145,7 @@ export default function AdminOrganizationsPage() {
           <button className="btn-ghost" onClick={() => setShowForm(!showForm)}>
             {showForm ? "Cancelar" : "+ Nova Organização"}
           </button>
-          <button className="btn-ghost" onClick={() => router.push('/admin')}>← Voltar</button>
+          <button className="btn-ghost" onClick={() => router.back()}>← Voltar</button>
         </div>
       </div>
 

@@ -22,7 +22,7 @@ export default function AdminEmissionsPage() {
     <main className="container">
       <div className="header-row">
         <h1>Badges emitidos</h1>
-        <button className="btn-ghost" onClick={() => router.push('/admin')}>← Voltar</button>
+        <button className="btn-ghost" onClick={() => router.back()}>← Voltar</button>
       </div>
       <section className="card">
         <ul className="list">
