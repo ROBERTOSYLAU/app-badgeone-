@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiGet, apiPost } from "../../../../lib/api";
+import { apiGet, apiPost, apiDelete } from "../../../../lib/api";
 import { useAuth } from "../../../../lib/auth-context";
 
 type Org = { id: number; name: string; document?: string; status: string };
@@ -58,6 +58,29 @@ export default function AdminOrganizationsPage() {
     apiGet("/api/v1/organizations").then(setOrgs).catch(() => {});
   }
 
+  async function toggleOrgStatus(id: number, currentStatus: string) {
+    try {
+      if (currentStatus === "active") {
+        await apiPost(`/api/v1/organizations/${id}/deactivate`, {});
+      } else {
+        await apiPost(`/api/v1/organizations/${id}/activate`, {});
+      }
+      loadOrgs();
+    } catch {
+      setMessage("Erro ao alterar status.");
+    }
+  }
+
+  async function deleteOrg(id: number) {
+    if (!confirm("Tem certeza que deseja remover esta organização?")) return;
+    try {
+      await apiDelete(`/api/v1/organizations/${id}`);
+      loadOrgs();
+    } catch {
+      setMessage("Erro ao remover organização.");
+    }
+  }
+
   async function lookupCnpj() {
     const cleanCnpj = cnpj.replace(/\D/g, "");
     if (cleanCnpj.length !== 14) {
@@ -67,7 +90,7 @@ export default function AdminOrganizationsPage() {
     setLoadingCnpj(true);
     setMessage("");
     try {
-      const data = await apiGet(`/api/v1/organizations/lookup-cnpj/${cleanCnpj}`);
+      const data = await apiGet(`/api/v1/organizations/cnpj/${cleanCnpj}`);
       setName(data.nome || "");
       setDocument(cleanCnpj);
       setAddress(`${data.logradouro}, ${data.numero} - ${data.bairro}, ${data.municipio} - ${data.uf}, ${data.cep}`);
@@ -187,9 +210,22 @@ export default function AdminOrganizationsPage() {
       )}
 
       <section className="card">
-        <ul className="list">
+        <ul className="list" style={{ listStyle: "none", padding: 0 }}>
           {filtered.map((o, i) => (
-            <li key={o.id}><Link href={`/admin/organizations/${o.id}`}>{i + 1}. {o.name}</Link> <span className="muted">({o.status})</span></li>
+            <li key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid var(--line)" }}>
+              <div>
+                <Link href={`/admin/organizations/${o.id}`} style={{ fontWeight: 600 }}>{i + 1}. {o.name}</Link>
+                <span className="muted" style={{ marginLeft: 8 }}>({o.status})</span>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button type="button" className="btn-ghost" style={{ width: "auto", fontSize: 12 }} onClick={() => toggleOrgStatus(o.id, o.status)}>
+                  {o.status === "active" ? "⏸️ Pausar" : "▶️ Ativar"}
+                </button>
+                <button type="button" className="btn-ghost" style={{ width: "auto", fontSize: 12, color: "var(--danger)" }} onClick={() => deleteOrg(o.id)}>
+                  🗑️ Remover
+                </button>
+              </div>
+            </li>
           ))}
           {!filtered.length && <li>Nenhuma organização.</li>}
         </ul>
