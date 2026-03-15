@@ -68,7 +68,9 @@ def list_orgs(db: Session = Depends(get_db), user: User = Depends(require_issuer
             return []
         q = q.filter(Organization.id == user.organization_id)
     data = q.order_by(Organization.id.desc()).all()
-    return [{"id": x.id, "name": x.name, "document": x.document, "status": x.status} for x in data]
+    return [{"id": x.id, "name": x.name, "document": x.document, "status": x.status,
+             "address": x.address, "cnae": x.cnae, "opening_date": x.opening_date,
+             "regime": x.regime, "capital": x.capital} for x in data]
 
 
 @router.get("/cnpj/{cnpj}")
@@ -147,3 +149,31 @@ def restore_org(org_id: int, db: Session = Depends(get_db), _=Depends(require_ad
     db.commit()
     db.refresh(org)
     return {"ok": True, "mode": "restored", "id": org.id, "status": org.status}
+
+
+@router.patch("/{org_id}")
+def update_org(org_id: int, data: dict, db: Session = Depends(get_db), _=Depends(require_admin)):
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organização não encontrada")
+    
+    if "name" in data:
+        org.name = data["name"]
+    if "document" in data:
+        org.document = data["document"]
+    if "address" in data:
+        org.address = data["address"]
+    if "cnae" in data:
+        org.cnae = data["cnae"]
+    if "opening_date" in data:
+        org.opening_date = data["opening_date"]
+    if "regime" in data:
+        org.regime = data["regime"]
+    if "capital" in data:
+        org.capital = data["capital"]
+    
+    db.commit()
+    db.refresh(org)
+    return {"ok": True, "id": org.id, "name": org.name, "document": org.document,
+            "address": org.address, "cnae": org.cnae, "opening_date": org.opening_date,
+            "regime": org.regime, "capital": org.capital}

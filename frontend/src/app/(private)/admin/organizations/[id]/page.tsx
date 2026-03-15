@@ -52,6 +52,10 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
   const [editName, setEditName] = useState("");
   const [editDocument, setEditDocument] = useState("");
   const [editAddress, setEditAddress] = useState("");
+  const [editCnae, setEditCnae] = useState("");
+  const [editOpeningDate, setEditOpeningDate] = useState("");
+  const [editRegime, setEditRegime] = useState("");
+  const [editCapital, setEditCapital] = useState("");
   
   // Create lot modal state
   const [showCreateLot, setShowCreateLot] = useState(false);
@@ -227,13 +231,26 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
     if (!org) return;
     setEditName(org.name);
     setEditDocument(org.document || "");
+    setEditAddress((org as any).address || "");
+    setEditCnae((org as any).cnae || "");
+    setEditOpeningDate((org as any).opening_date || "");
+    setEditRegime((org as any).regime || "");
+    setEditCapital((org as any).capital || "");
     setIsEditing(true);
   }
 
   async function saveEdit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await apiPatch(`/api/v1/organizations/${orgId}`, { name: editName, document: editDocument });
+      await apiPatch(`/api/v1/organizations/${orgId}`, { 
+        name: editName, 
+        document: editDocument,
+        address: editAddress,
+        cnae: editCnae,
+        opening_date: editOpeningDate,
+        regime: editRegime,
+        capital: editCapital
+      });
       setMessage("Organização atualizada com sucesso!");
       setIsEditing(false);
       loadAll();
@@ -293,6 +310,30 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
               <div>
                 <label>CNPJ</label>
                 <input value={editDocument} onChange={(e) => setEditDocument(e.target.value)} />
+              </div>
+              <div>
+                <label>Endereço</label>
+                <input value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label>CNAE Principal</label>
+                  <input value={editCnae} onChange={(e) => setEditCnae(e.target.value)} />
+                </div>
+                <div>
+                  <label>Data de Abertura</label>
+                  <input value={editOpeningDate} onChange={(e) => setEditOpeningDate(e.target.value)} />
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label>Natureza Jurídica</label>
+                  <input value={editRegime} onChange={(e) => setEditRegime(e.target.value)} />
+                </div>
+                <div>
+                  <label>Capital Social</label>
+                  <input value={editCapital} onChange={(e) => setEditCapital(e.target.value)} />
+                </div>
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
