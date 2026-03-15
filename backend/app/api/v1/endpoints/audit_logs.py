@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Body
 from sqlalchemy.orm import Session
 
 from app.core.auth import require_admin
@@ -63,12 +63,39 @@ def clear_audit_logs(
         q = q.filter(AuditLog.entity_id == entity_id)
 
     now = datetime.now(timezone.utc)
-    if period == "day":
+    if period == "day" or period == "dia":
         q = q.filter(AuditLog.created_at >= now - timedelta(days=1))
-    elif period == "week":
+    elif period == "week" or period == "semana":
         q = q.filter(AuditLog.created_at >= now - timedelta(days=7))
-    elif period == "month":
+    elif period == "month" or period == "mes":
         q = q.filter(AuditLog.created_at >= now - timedelta(days=30))
+    elif period == "hora":
+        q = q.filter(AuditLog.created_at >= now - timedelta(hours=1))
+
+    count = q.count()
+    q.delete(synchronize_session=False)
+    db.commit()
+    return {"ok": True, "deleted": count, "period": period}
+
+
+@router.post("/clear")
+def clear_audit_logs_post(
+    data: dict = Body(...),
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    period = data.get("period", "all")
+    q = db.query(AuditLog)
+    
+    now = datetime.now(timezone.utc)
+    if period == "day" or period == "dia":
+        q = q.filter(AuditLog.created_at >= now - timedelta(days=1))
+    elif period == "week" or period == "semana":
+        q = q.filter(AuditLog.created_at >= now - timedelta(days=7))
+    elif period == "month" or period == "mes":
+        q = q.filter(AuditLog.created_at >= now - timedelta(days=30))
+    elif period == "hora":
+        q = q.filter(AuditLog.created_at >= now - timedelta(hours=1))
 
     count = q.count()
     q.delete(synchronize_session=False)

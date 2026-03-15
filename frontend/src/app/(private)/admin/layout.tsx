@@ -11,9 +11,7 @@ function AdminSidebar() {
   const navItems = [
     { href: "/admin", label: "Visão Geral", icon: "📊" },
     { href: "/admin/organizations", label: "Organizações", icon: "🏢" },
-    { href: "/admin/users", label: "Usuários", icon: "👥" },
     { href: "/admin/lots", label: "Lotes", icon: "📦" },
-    { href: "/admin/emissions", label: "Emissões", icon: "🏅" },
     { href: "/admin/audit", label: "Auditoria", icon: "📋" },
   ];
 

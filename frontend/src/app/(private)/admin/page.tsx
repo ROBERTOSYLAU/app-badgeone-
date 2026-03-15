@@ -101,8 +101,19 @@ export default function AdminDashboard() {
         </div>
       </section>
 
-      {/* Onboarding Guide */}
-      {onboarding && !onboarding.completed && (
+      {/* Botão Tutorial */}
+      <section className="card" style={{ textAlign: "center", padding: 16 }}>
+        <button 
+          onClick={() => router.push("/admin/tutorial")} 
+          className="btn-ghost"
+          style={{ width: "auto", padding: "10px 24px" }}
+        >
+          📖 Ver Tutorial de Primeiros Passos
+        </button>
+      </section>
+
+      {/* Onboarding Guide - Hidden by default, shown on tutorial page */}
+      {false && onboarding && !onboarding.completed && (
         <section className="card">
           <h2>🚀 Complete seu setup</h2>
           <p>Siga os passos abaixo para configurar sua plataforma:</p>
