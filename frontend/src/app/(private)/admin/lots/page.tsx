@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiGet, apiPost } from "../../../../lib/api";
-import { getRole } from "../../../../lib/auth";
+import { useAuth } from "../../../../lib/auth-context";
 
 type Lot = { id: number; organization_id: number; title?: string; description?: string; total_badges: number; issued: number; remaining: number; status: string };
 type Org = { id: number; name: string };
@@ -36,11 +36,19 @@ function titleByFilter(status: string) {
 
 export default function AdminLotsPage() {
   const router = useRouter();
+  const { user, isLoading } = useAuth();
   const [lots, setLots] = useState<Lot[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [status, setStatus] = useState("all");
   const [recoverQtyByLot, setRecoverQtyByLot] = useState<Record<number, number>>({});
   const [message, setMessage] = useState("");
+  
+  // Create lot form state
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState("");
+  const [lotTitle, setLotTitle] = useState("");
+  const [lotDescription, setLotDescription] = useState("");
+  const [lotQuantity, setLotQuantity] = useState("");
 
   async function loadData() {
     const [l, o] = await Promise.all([apiGet('/api/v1/lots'), apiGet('/api/v1/organizations')]);
@@ -49,13 +57,43 @@ export default function AdminLotsPage() {
   }
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const s = new URLSearchParams(window.location.search).get("status") || "all";
-      setStatus(s);
+    if (isLoading) return;
+    if (!user || user.role !== "admin") {
+      router.push('/login');
+      return;
     }
-    if (getRole() !== "admin") return router.push('/login');
-    loadData().catch(() => router.push('/admin'));
-  }, [router]);
+    loadData().catch(() => {});
+  }, [user, isLoading, router]);
+
+  async function createLot(e: React.FormEvent) {
+    e.preventDefault();
+    const qty = Number(lotQuantity);
+    if (!qty || qty <= 0) {
+      setMessage("Quantidade deve ser maior que 0");
+      return;
+    }
+    if (!selectedOrg) {
+      setMessage("Selecione uma organização");
+      return;
+    }
+    try {
+      await apiPost("/api/v1/lots", {
+        organization_id: Number(selectedOrg),
+        title: lotTitle || `Lote ${new Date().toLocaleDateString('pt-BR')}`,
+        description: lotDescription,
+        total_badges: qty,
+      });
+      setMessage("Lote criado com sucesso!");
+      setShowCreateForm(false);
+      setLotTitle("");
+      setLotDescription("");
+      setLotQuantity("");
+      setSelectedOrg("");
+      loadData();
+    } catch {
+      setMessage("Erro ao criar lote.");
+    }
+  }
 
   const filtered = useMemo(() => status === "all" ? lots : lots.filter((l) => l.status === status), [lots, status]);
 
@@ -78,10 +116,50 @@ export default function AdminLotsPage() {
     <main className="container">
       <div className="header-row">
         <h1>Lotes ({titleByFilter(status)})</h1>
-        <button className="btn-ghost" onClick={() => router.back()}>← Voltar</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn-ghost" onClick={() => setShowCreateForm(!showCreateForm)}>
+            {showCreateForm ? "Cancelar" : "+ Criar Lote"}
+          </button>
+          <button className="btn-ghost" onClick={() => router.back()}>← Voltar</button>
+        </div>
       </div>
 
       {message && <p className={message.includes("Erro") ? "error" : "success"}>{message}</p>}
+
+      {showCreateForm && (
+        <section className="card" style={{ marginBottom: 20 }}>
+          <h2>Novo Lote</h2>
+          <form onSubmit={createLot}>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div>
+                <label>Organização *</label>
+                <select value={selectedOrg} onChange={(e) => setSelectedOrg(e.target.value)} required style={{ width: "100%", padding: 10, borderRadius: 8, background: "#0a163e", color: "#fff", border: "1px solid #2a3b73" }}>
+                  <option value="">Selecione uma organização</option>
+                  {orgs.map((o) => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label>Título do Lote (opcional)</label>
+                <input value={lotTitle} onChange={(e) => setLotTitle(e.target.value)} placeholder="Ex: Lote Março 2024" />
+              </div>
+              <div>
+                <label>Descrição (opcional)</label>
+                <input value={lotDescription} onChange={(e) => setLotDescription(e.target.value)} placeholder="Descrição do lote" />
+              </div>
+              <div>
+                <label>Quantidade de Badges *</label>
+                <input type="number" value={lotQuantity} onChange={(e) => setLotQuantity(e.target.value)} placeholder="100" required min="1" />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button type="submit">Criar Lote</button>
+              <button type="button" className="btn-ghost" onClick={() => setShowCreateForm(false)}>Cancelar</button>
+            </div>
+          </form>
+        </section>
+      )}
 
       <section className="card">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>

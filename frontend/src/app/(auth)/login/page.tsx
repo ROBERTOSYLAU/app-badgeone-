@@ -2,19 +2,43 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/auth-context";
+
+type ProfileType = "admin" | "issuer" | "winner" | "public";
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const router = useRouter();
+  const [selectedProfile, setSelectedProfile] = useState<ProfileType | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function selectProfile(profile: ProfileType) {
+    setSelectedProfile(profile);
+    // Pre-fill default emails based on profile
+    if (profile === "admin") {
+      setEmail("admin@badgeone.com.br");
+    } else if (profile === "issuer") {
+      setEmail("");
+    } else if (profile === "winner") {
+      router.push("/winner");
+    } else if (profile === "public") {
+      router.push("/verify/demo-credential");
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (!selectedProfile) {
+      setError("Selecione um perfil de acesso.");
+      return;
+    }
 
     if (!email || !password) {
       setError("Preencha e-mail e senha.");
@@ -46,18 +70,38 @@ export default function LoginPage() {
 
           {/* Opções de acesso */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
-            <button type="button" className="btn-active" style={{ textAlign: "center", padding: "10px", fontSize: 14 }}>
+            <button 
+              type="button" 
+              className={selectedProfile === "admin" ? "btn-active" : "btn-ghost"} 
+              style={{ textAlign: "center", padding: "10px", fontSize: 14 }}
+              onClick={() => selectProfile("admin")}
+            >
               👤 Admin
             </button>
-            <button type="button" className="btn-ghost" style={{ textAlign: "center", padding: "10px", fontSize: 14 }} disabled>
+            <button 
+              type="button" 
+              className={selectedProfile === "issuer" ? "btn-active" : "btn-ghost"} 
+              style={{ textAlign: "center", padding: "10px", fontSize: 14 }}
+              onClick={() => selectProfile("issuer")}
+            >
               🏢 Emissor
             </button>
-            <Link href="/winner" className="btn-ghost" style={{ textAlign: "center", padding: "10px", fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <button 
+              type="button" 
+              className={selectedProfile === "winner" ? "btn-active" : "btn-ghost"} 
+              style={{ textAlign: "center", padding: "10px", fontSize: 14 }}
+              onClick={() => selectProfile("winner")}
+            >
               🏆 Ganhador
-            </Link>
-            <Link href="/verify/demo-credential" className="btn-ghost" style={{ textAlign: "center", padding: "10px", fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            </button>
+            <button 
+              type="button" 
+              className={selectedProfile === "public" ? "btn-active" : "btn-ghost"} 
+              style={{ textAlign: "center", padding: "10px", fontSize: 14 }}
+              onClick={() => selectProfile("public")}
+            >
               🔍 Público
-            </Link>
+            </button>
           </div>
 
           <form onSubmit={onSubmit} className="login-form">
