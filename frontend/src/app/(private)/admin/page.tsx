@@ -63,13 +63,6 @@ export default function AdminDashboard() {
     );
   }
 
-  const steps = [
-    { key: "has_organization", label: "Criar primeira organização", path: "/admin/organizations", icon: "🏢" },
-    { key: "has_issuer_user", label: "Cadastrar usuário emissor", path: "/admin/users", icon: "👤" },
-    { key: "has_lot", label: "Criar primeiro lote de badges", path: "/admin/lots", icon: "📦" },
-    { key: "has_emission", label: "Emitir primeira credencial", path: "/admin/emissions", icon: "🏅" },
-  ];
-
   return (
     <div>
       <div className="header-row">
@@ -112,38 +105,7 @@ export default function AdminDashboard() {
         </button>
       </section>
 
-      {/* Onboarding Guide - Hidden by default, shown on tutorial page */}
-      {false && onboarding && !onboarding.completed && (
-        <section className="card">
-          <h2>🚀 Complete seu setup</h2>
-          <p>Siga os passos abaixo para configurar sua plataforma:</p>
-          
-          {steps.map((step, index) => {
-            const completed = onboarding ? (onboarding[step.key as keyof OnboardingStatus] as boolean) : false;
-            const isNext = onboarding?.next_step === step.key.replace("has_", "").replace("_user", "");
-            
-            return (
-              <div
-                key={step.key}
-                className={`onboarding-step ${completed ? "completed" : ""}`}
-                style={{ marginTop: 12 }}
-              >
-                <h3>
-                  <span className="step-number">{completed ? "✓" : index + 1}</span>
-                  {step.icon} {step.label}
-                  {completed && <span style={{ marginLeft: 8, color: "var(--success)" }}>Concluído</span>}
-                  {isNext && !completed && <span style={{ marginLeft: 8, color: "var(--primary)" }}>Próximo passo →</span>}
-                </h3>
-                {!completed && (
-                  <button onClick={() => router.push(step.path)} className="btn-ghost">
-                    Ir para {step.label}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </section>
-      )}
+
 
       {/* Quick Actions */}
       <section className="card">
