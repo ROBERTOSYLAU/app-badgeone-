@@ -46,6 +46,18 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
   const [noteTitle, setNoteTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState("");
+  
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDocument, setEditDocument] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  
+  // Create lot modal state
+  const [showCreateLot, setShowCreateLot] = useState(false);
+  const [lotTitle, setLotTitle] = useState("");
+  const [lotDescription, setLotDescription] = useState("");
+  const [lotQuantity, setLotQuantity] = useState("");
 
   const orgId = Number(params.id);
 
@@ -211,12 +223,56 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
     }
   }
 
+  function startEditing() {
+    if (!org) return;
+    setEditName(org.name);
+    setEditDocument(org.document || "");
+    setIsEditing(true);
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      await apiPatch(`/api/v1/organizations/${orgId}`, { name: editName, document: editDocument });
+      setMessage("Organização atualizada com sucesso!");
+      setIsEditing(false);
+      loadAll();
+    } catch {
+      setMessage("Erro ao atualizar organização.");
+    }
+  }
+
+  async function createLot(e: React.FormEvent) {
+    e.preventDefault();
+    const qty = Number(lotQuantity);
+    if (!qty || qty <= 0) {
+      setMessage("Quantidade deve ser maior que 0");
+      return;
+    }
+    try {
+      await apiPost("/api/v1/lots", {
+        organization_id: orgId,
+        title: lotTitle || `Lote ${new Date().toLocaleDateString('pt-BR')}`,
+        description: lotDescription,
+        total_badges: qty,
+      });
+      setMessage("Lote criado com sucesso!");
+      setShowCreateLot(false);
+      setLotTitle("");
+      setLotDescription("");
+      setLotQuantity("");
+      loadAll();
+    } catch {
+      setMessage("Erro ao criar lote.");
+    }
+  }
+
   return (
     <main className="container">
       <div className="header-row">
         <h1>Organização</h1>
         <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn-ghost" onClick={() => router.push("/admin")}>← Voltar</button>
+          <button className="btn-ghost" onClick={() => router.push("/admin/organizations")}>← Voltar</button>
           <button className="btn-ghost" onClick={() => { logout(); router.push('/'); }}>Sair</button>
         </div>
       </div>
@@ -224,6 +280,54 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
       {!org && <p className="error">Organização não encontrada.</p>}
 
       {message && <p className={message.includes("Erro") ? "error" : "success"}>{message}</p>}
+
+      {isEditing && org && (
+        <section className="card" style={{ marginBottom: 20 }}>
+          <h2>Editar Organização</h2>
+          <form onSubmit={saveEdit}>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div>
+                <label>Razão Social</label>
+                <input value={editName} onChange={(e) => setEditName(e.target.value)} required />
+              </div>
+              <div>
+                <label>CNPJ</label>
+                <input value={editDocument} onChange={(e) => setEditDocument(e.target.value)} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button type="submit">Salvar Alterações</button>
+              <button type="button" className="btn-ghost" onClick={() => setIsEditing(false)}>Cancelar</button>
+            </div>
+          </form>
+        </section>
+      )}
+
+      {showCreateLot && org && (
+        <section className="card" style={{ marginBottom: 20 }}>
+          <h2>Criar Lote</h2>
+          <form onSubmit={createLot}>
+            <div style={{ display: "grid", gap: 12 }}>
+              <div>
+                <label>Título do Lote (opcional)</label>
+                <input value={lotTitle} onChange={(e) => setLotTitle(e.target.value)} placeholder="Ex: Lote Março 2024" />
+              </div>
+              <div>
+                <label>Descrição (opcional)</label>
+                <input value={lotDescription} onChange={(e) => setLotDescription(e.target.value)} placeholder="Descrição do lote" />
+              </div>
+              <div>
+                <label>Quantidade de Badges *</label>
+                <input type="number" value={lotQuantity} onChange={(e) => setLotQuantity(e.target.value)} placeholder="100" required min="1" />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button type="submit">Criar Lote</button>
+              <button type="button" className="btn-ghost" onClick={() => setShowCreateLot(false)}>Cancelar</button>
+            </div>
+          </form>
+        </section>
+      )}
 
       {org && (
         <>
@@ -233,14 +337,16 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
             <p><strong>CNPJ:</strong> {org.document || "não informado"}</p>
             <p><strong>Status:</strong> {org.status}</p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button className="btn-ghost" onClick={startEditing}>✏️ Editar</button>
+              <button className="btn-ghost" onClick={() => setShowCreateLot(true)}>📦 Criar Lote</button>
               {org.status === "active" ? (
-                <button className="btn-ghost" onClick={deactivateOrganization}>Pausar organização</button>
+                <button className="btn-ghost" onClick={deactivateOrganization}>⏸️ Pausar</button>
               ) : org.status === "trashed" ? (
-                <button className="btn-ghost" onClick={restoreOrganization}>Restaurar organização</button>
+                <button className="btn-ghost" onClick={restoreOrganization}>🔄 Restaurar</button>
               ) : (
-                <button className="btn-ghost" onClick={activateOrganization}>Ativar organização</button>
+                <button className="btn-ghost" onClick={activateOrganization}>▶️ Ativar</button>
               )}
-              <button className="btn-ghost" onClick={deleteOrganization}>Mover para lixeira</button>
+              <button className="btn-ghost" onClick={deleteOrganization}>🗑️ Lixeira</button>
             </div>
           </section>
 
