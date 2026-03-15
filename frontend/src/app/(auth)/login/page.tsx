@@ -104,6 +104,9 @@ export default function LoginPage() {
           </form>
 
           <div className="login-footer">
+            <Link href="/" className="btn-ghost" style={{ display: "block", textAlign: "center", marginBottom: 12 }}>
+              ← Voltar para opções de acesso
+            </Link>
             <p>Ambiente seguro • Acesso restrito</p>
           </div>
         </div>
