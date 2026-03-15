@@ -45,17 +45,17 @@ export default function LoginPage() {
           <p className="subtitle">Escolha seu perfil de acesso</p>
 
           {/* Opções de acesso */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 24 }}>
-            <Link href="/login" className="btn-active" style={{ textAlign: "center", padding: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 20 }}>
+            <button type="button" className="btn-active" style={{ textAlign: "center", padding: "10px", fontSize: 14 }}>
               👤 Admin
-            </Link>
-            <Link href="/login" className="btn-ghost" style={{ textAlign: "center", padding: "12px" }}>
+            </button>
+            <button type="button" className="btn-ghost" style={{ textAlign: "center", padding: "10px", fontSize: 14 }} disabled>
               🏢 Emissor
-            </Link>
-            <Link href="/winner" className="btn-ghost" style={{ textAlign: "center", padding: "12px" }}>
+            </button>
+            <Link href="/winner" className="btn-ghost" style={{ textAlign: "center", padding: "10px", fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
               🏆 Ganhador
             </Link>
-            <Link href="/verify/demo-credential" className="btn-ghost" style={{ textAlign: "center", padding: "12px" }}>
+            <Link href="/verify/demo-credential" className="btn-ghost" style={{ textAlign: "center", padding: "10px", fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
               🔍 Público
             </Link>
           </div>
