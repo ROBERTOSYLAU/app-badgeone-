@@ -28,6 +28,7 @@ services:
       DATABASE_URL: postgresql+psycopg://badgeone:badgeone@postgres:5432/badgeone
       REDIS_URL: redis://redis:6379
       APP_ENV: production
+      JWT_SECRET: ${JWT_SECRET:-badgeone-super-secret-key-change-in-production-2024}
 
   frontend:
     build: ./frontend
