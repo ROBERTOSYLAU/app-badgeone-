@@ -17,6 +17,7 @@ type User = {
 type Organization = {
   id: number;
   name: string;
+  status: string;
 };
 
 export default function AdminUsersPage() {
