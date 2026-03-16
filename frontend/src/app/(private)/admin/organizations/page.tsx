@@ -89,11 +89,20 @@ export default function AdminOrganizationsPage() {
       return;
     }
     try {
-      await apiDelete(`/api/v1/organizations/${id}?force=true`);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/v1/organizations/${id}?force=true`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Erro ao excluir');
+      }
       setMessage("Organização removida permanentemente.");
       loadOrgs();
-    } catch {
-      setMessage("Erro ao remover organização permanentemente.");
+    } catch (err: any) {
+      setMessage(err?.message || "Erro ao remover organização permanentemente.");
     }
   }
 
@@ -232,9 +241,12 @@ export default function AdminOrganizationsPage() {
         <ul className="list" style={{ listStyle: "none", padding: 0 }}>
           {filtered.map((o, i) => (
             <li key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid var(--line)" }}>
-              <div>
-                <a href={`/admin/organizations/${o.id}`} style={{ fontWeight: 600, cursor: "pointer", textDecoration: "none", color: "inherit" }} onClick={(e) => { e.preventDefault(); router.push(`/admin/organizations/${o.id}`); }}>{i + 1}. {o.name}</a>
-                <span className="muted" style={{ marginLeft: 8 }}>({o.status})</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontWeight: 600 }}>{i + 1}. {o.name}</span>
+                <span className="muted">({o.status})</span>
+                <button type="button" className="btn-ghost" style={{ width: "auto", fontSize: 11, padding: "4px 8px" }} onClick={() => router.push(`/admin/organizations/${o.id}`)}>
+                  📋 Ver Detalhes
+                </button>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 {o.status === "trashed" ? (

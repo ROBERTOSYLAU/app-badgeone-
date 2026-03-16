@@ -36,11 +36,14 @@ export default function AdminDashboard() {
         apiGet("/api/v1/lots"),
         apiGet("/api/v1/auth/onboarding-status"),
       ]);
+      console.log("Organizações carregadas:", o.length, o);
+      console.log("Lotes carregados:", l.length, l);
+      console.log("Onboarding:", ob);
       setOrgs(o);
       setLots(l);
       setOnboarding(ob);
-    } catch {
-      console.error("Erro ao carregar dados");
+    } catch (err) {
+      console.error("Erro ao carregar dados:", err);
     } finally {
       setLoading(false);
     }
