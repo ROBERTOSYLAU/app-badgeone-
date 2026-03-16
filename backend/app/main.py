@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app.api.v1.router import api_router
-from app.core.db import Base, engine
+from app.core.db import Base, engine, run_migrations
 from app.core.config import settings
 from app.models import User, Organization, BadgeLot, Credential, OrganizationNote, AuditLog
 
@@ -28,6 +28,8 @@ app.include_router(api_router, prefix="/api/v1")
 @app.on_event("startup")
 def startup():
     Base.metadata.create_all(bind=engine)
+    # Run custom migrations
+    run_migrations()
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE badge_lots ADD COLUMN IF NOT EXISTS title VARCHAR(180)"))
