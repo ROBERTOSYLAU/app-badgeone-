@@ -161,6 +161,7 @@ export default function AdminOrganizationsPage() {
               placeholder="Digite o CNPJ"
               value={cnpj}
               onChange={(e) => setCnpj(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); lookupCnpj(); } }}
               maxLength={18}
               style={{ flex: 1 }}
             />
