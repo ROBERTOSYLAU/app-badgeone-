@@ -37,6 +37,7 @@ def startup():
             conn.execute(text("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS cnae VARCHAR(255)"))
             conn.execute(text("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS opening_date VARCHAR(20)"))
             conn.execute(text("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS regime VARCHAR(100)"))
+            conn.execute(text("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()"))
             # Other tables
             conn.execute(text("ALTER TABLE badge_lots ADD COLUMN IF NOT EXISTS title VARCHAR(180)"))
             conn.execute(text("ALTER TABLE badge_lots ADD COLUMN IF NOT EXISTS description VARCHAR(500)"))
