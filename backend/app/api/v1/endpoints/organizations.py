@@ -197,3 +197,48 @@ def update_org(org_id: int, data: dict, db: Session = Depends(get_db), _=Depends
     return {"ok": True, "id": org.id, "name": org.name, "document": org.document,
             "address": org.address, "cnae": org.cnae, "opening_date": org.opening_date,
             "regime": org.regime}
+
+
+@router.post("/migrate/add-fields")
+def migrate_add_fields(db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Temporary endpoint to add missing columns to organizations table"""
+    from sqlalchemy import text
+    
+    try:
+        # Check if columns exist
+        result = db.execute(text("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'organizations'
+        """))
+        existing_columns = {row[0] for row in result}
+        
+        added = []
+        
+        # Add missing columns
+        columns_to_add = {
+            'address': 'TEXT',
+            'cnae': 'VARCHAR(255)',
+            'opening_date': 'VARCHAR(20)',
+            'regime': 'VARCHAR(100)'
+        }
+        
+        for col_name, col_type in columns_to_add.items():
+            if col_name not in existing_columns:
+                db.execute(text(f"""
+                    ALTER TABLE organizations 
+                    ADD COLUMN {col_name} {col_type}
+                """))
+                added.append(col_name)
+        
+        db.commit()
+        
+        return {
+            "ok": True, 
+            "message": "Migration completed",
+            "existing_columns": list(existing_columns),
+            "added_columns": added
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")

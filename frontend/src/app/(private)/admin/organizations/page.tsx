@@ -113,14 +113,16 @@ export default function AdminOrganizationsPage() {
     e.preventDefault();
     setMessage("");
     try {
-      await apiPost("/api/v1/organizations", {
+      const payload = {
         name,
         document: document || cnpj.replace(/\D/g, ""),
         address,
         cnae,
         opening_date: openingDate,
         regime,
-      });
+      };
+      console.log("Enviando payload:", payload);
+      await apiPost("/api/v1/organizations", payload);
       setMessage("Organização criada com sucesso!");
       setShowForm(false);
       loadOrgs();
@@ -132,8 +134,10 @@ export default function AdminOrganizationsPage() {
       setCnae("");
       setOpeningDate("");
       setRegime("");
-    } catch {
-      setMessage("Erro ao criar organização.");
+    } catch (err: any) {
+      console.error("Erro ao criar organização:", err);
+      const errorMsg = err?.message || "Erro ao criar organização.";
+      setMessage(errorMsg);
     }
   }
 
