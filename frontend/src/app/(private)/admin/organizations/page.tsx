@@ -70,12 +70,30 @@ export default function AdminOrganizationsPage() {
   }
 
   async function deleteOrg(id: number) {
-    if (!confirm("Tem certeza que deseja remover esta organização?")) return;
+    // Primeiro move para lixeira
+    if (!confirm("Tem certeza que deseja mover esta organização para a lixeira?")) return;
     try {
       await apiDelete(`/api/v1/organizations/${id}`);
+      setMessage("Organização movida para a lixeira.");
       loadOrgs();
     } catch {
-      setMessage("Erro ao remover organização.");
+      setMessage("Erro ao mover organização para lixeira.");
+    }
+  }
+
+  async function permanentlyDeleteOrg(id: number, name: string) {
+    // Remoção permanente
+    const confirmText = window.prompt(`Para remover permanentemente a organização "${name}", digite EXCLUIR:`);
+    if (confirmText !== "EXCLUIR") {
+      setMessage("Remoção cancelada.");
+      return;
+    }
+    try {
+      await apiDelete(`/api/v1/organizations/${id}?force=true`);
+      setMessage("Organização removida permanentemente.");
+      loadOrgs();
+    } catch {
+      setMessage("Erro ao remover organização permanentemente.");
     }
   }
 
@@ -215,16 +233,29 @@ export default function AdminOrganizationsPage() {
           {filtered.map((o, i) => (
             <li key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid var(--line)" }}>
               <div>
-                <Link href={`/admin/organizations/${o.id}`} style={{ fontWeight: 600 }}>{i + 1}. {o.name}</Link>
+                <a href={`/admin/organizations/${o.id}`} style={{ fontWeight: 600, cursor: "pointer", textDecoration: "none", color: "inherit" }} onClick={(e) => { e.preventDefault(); router.push(`/admin/organizations/${o.id}`); }}>{i + 1}. {o.name}</a>
                 <span className="muted" style={{ marginLeft: 8 }}>({o.status})</span>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button type="button" className="btn-ghost" style={{ width: "auto", fontSize: 12 }} onClick={() => toggleOrgStatus(o.id, o.status)}>
-                  {o.status === "active" ? "⏸️ Pausar" : "▶️ Ativar"}
-                </button>
-                <button type="button" className="btn-ghost" style={{ width: "auto", fontSize: 12, color: "var(--danger)" }} onClick={() => deleteOrg(o.id)}>
-                  🗑️ Remover
-                </button>
+                {o.status === "trashed" ? (
+                  <>
+                    <button type="button" className="btn-ghost" style={{ width: "auto", fontSize: 12 }} onClick={() => toggleOrgStatus(o.id, o.status)}>
+                      🔄 Restaurar
+                    </button>
+                    <button type="button" className="btn-ghost" style={{ width: "auto", fontSize: 12, color: "var(--danger)" }} onClick={() => permanentlyDeleteOrg(o.id, o.name)}>
+                      🗑️ Excluir Permanentemente
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="btn-ghost" style={{ width: "auto", fontSize: 12 }} onClick={() => toggleOrgStatus(o.id, o.status)}>
+                      {o.status === "active" ? "⏸️ Pausar" : "▶️ Ativar"}
+                    </button>
+                    <button type="button" className="btn-ghost" style={{ width: "auto", fontSize: 12 }} onClick={() => deleteOrg(o.id)}>
+                      🗑️ Lixeira
+                    </button>
+                  </>
+                )}
               </div>
             </li>
           ))}

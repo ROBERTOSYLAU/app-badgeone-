@@ -135,10 +135,13 @@ export default function AdminLotsPage() {
                 <label>Organização *</label>
                 <select value={selectedOrg} onChange={(e) => setSelectedOrg(e.target.value)} required style={{ width: "100%", padding: 10, borderRadius: 8, background: "#0a163e", color: "#fff", border: "1px solid #2a3b73" }}>
                   <option value="">Selecione uma organização</option>
-                  {orgs.map((o) => (
+                  {orgs.filter(o => o.status === 'active').map((o) => (
                     <option key={o.id} value={o.id}>{o.name}</option>
                   ))}
                 </select>
+                {orgs.filter(o => o.status === 'active').length === 0 && (
+                  <p style={{ color: 'var(--danger)', fontSize: 12, marginTop: 4 }}>Nenhuma organização ativa disponível. Ative ou cadastre uma organização primeiro.</p>
+                )}
               </div>
               <div>
                 <label>Título do Lote (opcional)</label>
