@@ -18,6 +18,10 @@ router = APIRouter()
 class OrganizationCreate(BaseModel):
     name: str | None = None
     document: str | None = None
+    address: str | None = None
+    cnae: str | None = None
+    opening_date: str | None = None
+    regime: str | None = None
 
 
 def _lookup_cnpj_data(cnpj: str):
@@ -53,11 +57,21 @@ def create_org(payload: OrganizationCreate, db: Session = Depends(get_db), _=Dep
     if not name:
         raise HTTPException(status_code=400, detail="Informe nome ou CNPJ válido")
 
-    org = Organization(name=name, document=doc, status="active")
+    org = Organization(
+        name=name,
+        document=doc,
+        status="active",
+        address=payload.address,
+        cnae=payload.cnae,
+        opening_date=payload.opening_date,
+        regime=payload.regime
+    )
     db.add(org)
     db.commit()
     db.refresh(org)
-    return {"id": org.id, "name": org.name, "document": org.document, "status": org.status}
+    return {"id": org.id, "name": org.name, "document": org.document, "status": org.status,
+            "address": org.address, "cnae": org.cnae, "opening_date": org.opening_date,
+            "regime": org.regime}
 
 
 @router.get("")
