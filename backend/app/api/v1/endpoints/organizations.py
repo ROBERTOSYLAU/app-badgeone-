@@ -47,31 +47,39 @@ def _lookup_cnpj_data(cnpj: str):
 
 @router.post("")
 def create_org(payload: OrganizationCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
-    doc = (payload.document or "").strip() or None
-    name = (payload.name or "").strip() or None
+    try:
+        doc = (payload.document or "").strip() or None
+        name = (payload.name or "").strip() or None
 
-    if doc and not name:
-        cnpj_data = _lookup_cnpj_data(doc)
-        name = cnpj_data.get("razao_social") or cnpj_data.get("nome_fantasia")
+        if doc and not name:
+            cnpj_data = _lookup_cnpj_data(doc)
+            name = cnpj_data.get("razao_social") or cnpj_data.get("nome_fantasia")
 
-    if not name:
-        raise HTTPException(status_code=400, detail="Informe nome ou CNPJ válido")
+        if not name:
+            raise HTTPException(status_code=400, detail="Informe nome ou CNPJ válido")
 
-    org = Organization(
-        name=name,
-        document=doc,
-        status="active",
-        address=payload.address,
-        cnae=payload.cnae,
-        opening_date=payload.opening_date,
-        regime=payload.regime
-    )
-    db.add(org)
-    db.commit()
-    db.refresh(org)
-    return {"id": org.id, "name": org.name, "document": org.document, "status": org.status,
-            "address": org.address, "cnae": org.cnae, "opening_date": org.opening_date,
-            "regime": org.regime}
+        org = Organization(
+            name=name,
+            document=doc,
+            status="active",
+            address=payload.address,
+            cnae=payload.cnae,
+            opening_date=payload.opening_date,
+            regime=payload.regime
+        )
+        db.add(org)
+        db.commit()
+        db.refresh(org)
+        return {"id": org.id, "name": org.name, "document": org.document, "status": org.status,
+                "address": org.address, "cnae": org.cnae, "opening_date": org.opening_date,
+                "regime": org.regime}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"ERRO ao criar organização: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 
 @router.get("")
