@@ -4,13 +4,18 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: badgeone_postgres
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_USER: badgeone
       POSTGRES_PASSWORD: badgeone
       POSTGRES_DB: badgeone
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U badgeone"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
