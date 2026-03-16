@@ -25,7 +25,7 @@ export default function LoginPage() {
     } else if (profile === "issuer") {
       setEmail("");
     } else if (profile === "winner") {
-      router.push("/winner");
+      setEmail(""); // Winner needs to enter their email
     } else if (profile === "public") {
       router.push("/verify/demo-credential");
     }
