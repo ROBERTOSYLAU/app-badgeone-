@@ -55,7 +55,6 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
   const [editCnae, setEditCnae] = useState("");
   const [editOpeningDate, setEditOpeningDate] = useState("");
   const [editRegime, setEditRegime] = useState("");
-  const [editCapital, setEditCapital] = useState("");
   
   // Create lot modal state
   const [showCreateLot, setShowCreateLot] = useState(false);
@@ -235,7 +234,6 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
     setEditCnae((org as any).cnae || "");
     setEditOpeningDate((org as any).opening_date || "");
     setEditRegime((org as any).regime || "");
-    setEditCapital((org as any).capital || "");
     setIsEditing(true);
   }
 
@@ -249,7 +247,6 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
         cnae: editCnae,
         opening_date: editOpeningDate,
         regime: editRegime,
-        capital: editCapital
       });
       setMessage("Organização atualizada com sucesso!");
       setIsEditing(false);
@@ -325,15 +322,9 @@ export default function OrganizationDetailsPage({ params }: { params: { id: stri
                   <input value={editOpeningDate} onChange={(e) => setEditOpeningDate(e.target.value)} />
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label>Natureza Jurídica</label>
-                  <input value={editRegime} onChange={(e) => setEditRegime(e.target.value)} />
-                </div>
-                <div>
-                  <label>Capital Social</label>
-                  <input value={editCapital} onChange={(e) => setEditCapital(e.target.value)} />
-                </div>
+              <div>
+                <label>Natureza Jurídica</label>
+                <input value={editRegime} onChange={(e) => setEditRegime(e.target.value)} />
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>

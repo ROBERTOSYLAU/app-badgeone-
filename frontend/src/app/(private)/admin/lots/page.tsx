@@ -172,9 +172,12 @@ export default function AdminLotsPage() {
         <ul className="list">
           {filtered.map((l, i) => {
             const org = orgs.find((o) => o.id === l.organization_id);
+            // Formata data para BR
+            const createdAt = (l as any).created_at;
+            const dateStr = createdAt ? new Date(createdAt).toLocaleString('pt-BR') : '-';
             return (
               <li key={l.id}>
-                {i + 1}. <Link className="lot-title-highlight" href={`/admin/lots/${l.id}`}>{(l.title || `Lote #${l.id}`).toUpperCase()}</Link> | Empresa {org?.name || l.organization_id} | Status {statusLabel(l.status)} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining}
+                {i + 1}. <Link className="lot-title-highlight" href={`/admin/lots/${l.id}`}>{(l.title || `Lote #${l.id}`).toUpperCase()}</Link> | Empresa {org?.name || l.organization_id} | Status {statusLabel(l.status)} | Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Criado: {dateStr}
                 {(l.status === "revoked" || l.status === "trashed") && (
                   <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <input

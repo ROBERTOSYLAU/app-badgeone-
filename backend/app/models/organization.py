@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy.sql import func
 from app.core.db import Base
 
 
@@ -13,4 +14,4 @@ class Organization(Base):
     cnae = Column(String(255), nullable=True)
     opening_date = Column(String(20), nullable=True)
     regime = Column(String(100), nullable=True)
-    capital = Column(String(50), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

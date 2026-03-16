@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy.sql import func
 from app.core.db import Base
 
 
@@ -13,3 +14,4 @@ class BadgeLot(Base):
     issued = Column(Integer, nullable=False, default=0)
     issue_window_days = Column(Integer, nullable=False, default=365)
     status = Column(String(20), nullable=False, default="active")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

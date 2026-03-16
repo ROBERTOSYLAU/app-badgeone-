@@ -70,7 +70,7 @@ def list_orgs(db: Session = Depends(get_db), user: User = Depends(require_issuer
     data = q.order_by(Organization.id.desc()).all()
     return [{"id": x.id, "name": x.name, "document": x.document, "status": x.status,
              "address": x.address, "cnae": x.cnae, "opening_date": x.opening_date,
-             "regime": x.regime, "capital": x.capital} for x in data]
+             "regime": x.regime, "created_at": x.created_at.isoformat() if x.created_at else None} for x in data]
 
 
 @router.get("/cnpj/{cnpj}")
@@ -169,11 +169,9 @@ def update_org(org_id: int, data: dict, db: Session = Depends(get_db), _=Depends
         org.opening_date = data["opening_date"]
     if "regime" in data:
         org.regime = data["regime"]
-    if "capital" in data:
-        org.capital = data["capital"]
     
     db.commit()
     db.refresh(org)
     return {"ok": True, "id": org.id, "name": org.name, "document": org.document,
             "address": org.address, "cnae": org.cnae, "opening_date": org.opening_date,
-            "regime": org.regime, "capital": org.capital}
+            "regime": org.regime}

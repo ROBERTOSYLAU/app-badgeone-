@@ -23,7 +23,6 @@ type CnpjData = {
   cnae_fiscal_descricao: string;
   data_inicio_atividade: string;
   natureza_juridica: string;
-  capital_social: string;
 };
 
 export default function AdminOrganizationsPage() {
@@ -41,7 +40,6 @@ export default function AdminOrganizationsPage() {
   const [cnae, setCnae] = useState("");
   const [openingDate, setOpeningDate] = useState("");
   const [regime, setRegime] = useState("");
-  const [capital, setCapital] = useState("");
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -95,9 +93,15 @@ export default function AdminOrganizationsPage() {
       setDocument(cleanCnpj);
       setAddress(`${data.logradouro}, ${data.numero} - ${data.bairro}, ${data.municipio} - ${data.uf}, ${data.cep}`);
       setCnae(data.cnae_fiscal_descricao || "");
-      setOpeningDate(data.data_inicio_atividade || "");
+      // Formata data para BR: 2022-09-27 -> 27/09/2022
+      const rawDate = data.data_inicio_atividade || "";
+      if (rawDate) {
+        const [year, month, day] = rawDate.split("-");
+        setOpeningDate(`${day}/${month}/${year}`);
+      } else {
+        setOpeningDate("");
+      }
       setRegime(data.natureza_juridica || "");
-      setCapital(data.capital_social ? `R$ ${data.capital_social}` : "");
     } catch {
       setMessage("Erro ao buscar CNPJ. Verifique se é válido.");
     } finally {
@@ -116,7 +120,6 @@ export default function AdminOrganizationsPage() {
         cnae,
         opening_date: openingDate,
         regime,
-        capital,
       });
       setMessage("Organização criada com sucesso!");
       setShowForm(false);
@@ -129,7 +132,6 @@ export default function AdminOrganizationsPage() {
       setCnae("");
       setOpeningDate("");
       setRegime("");
-      setCapital("");
     } catch {
       setMessage("Erro ao criar organização.");
     }
@@ -193,15 +195,9 @@ export default function AdminOrganizationsPage() {
                   <input value={openingDate} onChange={(e) => setOpeningDate(e.target.value)} />
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label>Natureza Jurídica</label>
-                  <input value={regime} onChange={(e) => setRegime(e.target.value)} />
-                </div>
-                <div>
-                  <label>Capital Social</label>
-                  <input value={capital} onChange={(e) => setCapital(e.target.value)} />
-                </div>
+              <div>
+                <label>Natureza Jurídica</label>
+                <input value={regime} onChange={(e) => setRegime(e.target.value)} />
               </div>
             </div>
             <button type="submit" style={{ marginTop: 16 }}>Criar Organização</button>
