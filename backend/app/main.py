@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from app.api.v1.router import api_router
-from app.core.db import Base, engine, run_migrations
+from app.core.db import Base, engine
 from app.core.config import settings
 from app.models import User, Organization, BadgeLot, Credential, OrganizationNote, AuditLog
 
@@ -28,15 +28,22 @@ app.include_router(api_router, prefix="/api/v1")
 @app.on_event("startup")
 def startup():
     Base.metadata.create_all(bind=engine)
-    # Run custom migrations
-    run_migrations()
+    
+    # Add missing columns to organizations table
     try:
         with engine.begin() as conn:
+            # Organizations table columns
+            conn.execute(text("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS address TEXT"))
+            conn.execute(text("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS cnae VARCHAR(255)"))
+            conn.execute(text("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS opening_date VARCHAR(20)"))
+            conn.execute(text("ALTER TABLE organizations ADD COLUMN IF NOT EXISTS regime VARCHAR(100)"))
+            # Other tables
             conn.execute(text("ALTER TABLE badge_lots ADD COLUMN IF NOT EXISTS title VARCHAR(180)"))
             conn.execute(text("ALTER TABLE badge_lots ADD COLUMN IF NOT EXISTS description VARCHAR(500)"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'"))
-    except Exception:
-        pass
+            print("✅ Database migrations completed successfully")
+    except Exception as e:
+        print(f"⚠️ Migration warning (may already exist): {e}")
 
 
 @app.get("/health")
