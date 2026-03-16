@@ -9,7 +9,7 @@ import { apiGet, apiPost } from "../../../../lib/api";
 import { useAuth } from "../../../../lib/auth-context";
 
 type Lot = { id: number; organization_id: number; title?: string; description?: string; total_badges: number; issued: number; remaining: number; status: string };
-type Org = { id: number; name: string };
+type Org = { id: number; name: string; status?: string };
 
 function statusLabel(status: string) {
   const map: Record<string, string> = {
