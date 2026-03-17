@@ -29,13 +29,20 @@ class LotUpdate(BaseModel):
 
 
 class LotRevokeRequest(BaseModel):
-    mode: str = "full"  # full | partial
+    mode: str = "full"
     quantity: int | None = None
 
 
 class LotRecoverRequest(BaseModel):
     quantity: int | None = None
     to_status: str = "active"
+
+
+def _remaining(obj) -> int:
+    try:
+        return int(obj.total_badges) - int(obj.issued)
+    except Exception:
+        return 0
 
 
 def _safe_issue_window_days(obj) -> int:
@@ -48,17 +55,17 @@ def _safe_issue_window_days(obj) -> int:
         return 365
 
 
-def _remaining(obj) -> int:
+def _safe_created_at(obj):
     try:
-        return int(obj.total_badges) - int(obj.issued)
+        value = getattr(obj, "created_at", None)
+        return value.isoformat() if value else None
     except Exception:
-        return 0
+        return None
 
 
 def ensure_lot_columns(db: Session):
     """
-    Garante que a coluna issue_window_days exista.
-    Isso evita erro 500 ao listar/criar lotes em bases antigas.
+    Corrige bancos antigos que ainda não têm as colunas novas.
     """
     table_name = getattr(BadgeLot, "__tablename__", "badge_lots")
 
@@ -85,7 +92,18 @@ def ensure_lot_columns(db: Session):
                     """
                 )
             )
-            db.commit()
+
+        if "created_at" not in existing_columns:
+            db.execute(
+                text(
+                    f"""
+                    ALTER TABLE {table_name}
+                    ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    """
+                )
+            )
+
+        db.commit()
 
     except Exception as e:
         db.rollback()
@@ -120,10 +138,10 @@ def create_lot(
 
     org = db.query(Organization).filter(Organization.id == payload.organization_id).first()
     if not org:
-        raise HTTPException(status_code=404, detail="Organização não encontrada")
+      raise HTTPException(status_code=404, detail="Organização não encontrada")
 
     if getattr(org, "status", None) == "trashed":
-        raise HTTPException(status_code=400, detail="Não é possível criar lote para organização na lixeira")
+      raise HTTPException(status_code=400, detail="Não é possível criar lote para organização na lixeira")
 
     try:
         lot = BadgeLot(
@@ -162,6 +180,7 @@ def create_lot(
             "remaining": _remaining(lot),
             "issue_window_days": _safe_issue_window_days(lot),
             "status": lot.status,
+            "created_at": _safe_created_at(lot),
         }
 
     except HTTPException:
@@ -220,6 +239,7 @@ def update_lot(
         "remaining": _remaining(lot),
         "issue_window_days": _safe_issue_window_days(lot),
         "status": lot.status,
+        "created_at": _safe_created_at(lot),
     }
 
 
@@ -273,6 +293,7 @@ def revoke_lot(
         "issued": lot.issued,
         "remaining": _remaining(lot),
         "issue_window_days": _safe_issue_window_days(lot),
+        "created_at": _safe_created_at(lot),
     }
 
 
@@ -317,6 +338,7 @@ def recover_lot(
         "issued": lot.issued,
         "remaining": _remaining(lot),
         "issue_window_days": _safe_issue_window_days(lot),
+        "created_at": _safe_created_at(lot),
     }
 
 
@@ -350,6 +372,7 @@ def list_lots(
             "remaining": _remaining(x),
             "issue_window_days": _safe_issue_window_days(x),
             "status": x.status,
+            "created_at": _safe_created_at(x),
         }
         for x in data
     ]
