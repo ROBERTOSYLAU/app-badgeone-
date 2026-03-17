@@ -37,7 +37,7 @@ type CnpjData = {
 
 function statusLabel(status: string) {
   const map: Record<string, string> = {
-    all: "Todos",
+    all: "Todas",
     active: "Ativas",
     inactive: "Inativas",
     paused: "Pausadas",
@@ -55,9 +55,21 @@ function orgStatusLabel(status: string) {
     paused: "Pausada",
     revoked: "Revogada",
     finished: "Finalizada",
-    trashed: "Lixeira",
+    trashed: "Na lixeira",
   };
   return map[status] || status;
+}
+
+function statusColor(status: string) {
+  const map: Record<string, string> = {
+    active: "#22c55e",
+    inactive: "#f59e0b",
+    paused: "#f59e0b",
+    revoked: "#ef4444",
+    finished: "#6b7280",
+    trashed: "#9ca3af",
+  };
+  return map[status] || "#9ca3af";
 }
 
 function formatDateBR(value?: string) {
@@ -67,6 +79,19 @@ function formatDateBR(value?: string) {
     return `${d}/${m}/${y}`;
   }
   return value;
+}
+
+function normalizeDateToApi(value?: string) {
+  if (!value) return "";
+  const v = value.trim();
+  if (!v) return "";
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
+    const [d, m, y] = v.split("/");
+    return `${y}-${m}-${d}`;
+  }
+
+  return v;
 }
 
 function joinAddress(data: CnpjData) {
@@ -83,6 +108,12 @@ function joinAddress(data: CnpjData) {
     .filter(Boolean);
 
   return parts.join(", ");
+}
+
+function shortText(value?: string, max = 90) {
+  if (!value) return "";
+  if (value.length <= max) return value;
+  return `${value.slice(0, max)}...`;
 }
 
 export default function AdminOrganizationsPage() {
@@ -102,6 +133,7 @@ export default function AdminOrganizationsPage() {
   const [regime, setRegime] = useState("");
 
   const [loadingCnpj, setLoadingCnpj] = useState(false);
+  const [loadingPage, setLoadingPage] = useState(true);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -116,6 +148,9 @@ export default function AdminOrganizationsPage() {
   }, [user, isLoading, router]);
 
   async function loadOrgs() {
+    setLoadingPage(true);
+    setMessage("");
+
     try {
       const data = await apiGet("/api/v1/organizations");
       setOrgs((data as Org[]) || []);
@@ -123,6 +158,8 @@ export default function AdminOrganizationsPage() {
       const msg = e instanceof Error ? e.message : "Erro ao carregar organizações.";
       setMessage(msg);
       setOrgs([]);
+    } finally {
+      setLoadingPage(false);
     }
   }
 
@@ -175,9 +212,9 @@ export default function AdminOrganizationsPage() {
     }
   }
 
-  async function permanentlyDeleteOrg(id: number, name: string) {
+  async function permanentlyDeleteOrg(id: number, orgName: string) {
     const ok = window.confirm(
-      `Tem certeza que deseja excluir permanentemente a organização "${name}"? Esta ação não poderá ser desfeita.`
+      `Tem certeza que deseja excluir permanentemente a organização "${orgName}"? Esta ação não poderá ser desfeita.`
     );
     if (!ok) return;
 
@@ -208,9 +245,7 @@ export default function AdminOrganizationsPage() {
       setName(data.razao_social || data.nome_fantasia || "");
       setDocument(cleanCnpj);
       setAddress(joinAddress(data));
-      setCnae(
-        [data.cnae_fiscal, data.cnae_fiscal_descricao].filter(Boolean).join(" - ")
-      );
+      setCnae([data.cnae_fiscal, data.cnae_fiscal_descricao].filter(Boolean).join(" - "));
 
       if (data.data_inicio_atividade) {
         setOpeningDate(formatDateBR(data.data_inicio_atividade));
@@ -234,12 +269,12 @@ export default function AdminOrganizationsPage() {
 
     try {
       const payload = {
-        name,
-        document: document || cnpj.replace(/\D/g, ""),
-        address,
-        cnae,
-        opening_date: openingDate,
-        regime,
+        name: name.trim(),
+        document: (document || cnpj.replace(/\D/g, "")).trim(),
+        address: address.trim(),
+        cnae: cnae.trim(),
+        opening_date: normalizeDateToApi(openingDate),
+        regime: regime.trim(),
       };
 
       await apiPost("/api/v1/organizations", payload);
@@ -265,10 +300,30 @@ export default function AdminOrganizationsPage() {
     [orgs, status]
   );
 
+  const totalAtivas = useMemo(
+    () => orgs.filter((o) => o.status === "active").length,
+    [orgs]
+  );
+
+  const totalInativas = useMemo(
+    () => orgs.filter((o) => o.status === "inactive" || o.status === "paused").length,
+    [orgs]
+  );
+
+  const totalLixeira = useMemo(
+    () => orgs.filter((o) => o.status === "trashed").length,
+    [orgs]
+  );
+
   return (
     <main className="container">
       <div className="header-row">
-        <h1>Organizações ({statusLabel(status)})</h1>
+        <div>
+          <h1>Organizações ({statusLabel(status)})</h1>
+          <p className="muted">
+            Total: {orgs.length} | Ativas: {totalAtivas} | Inativas: {totalInativas} | Lixeira: {totalLixeira}
+          </p>
+        </div>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className="btn-ghost" onClick={() => setShowForm((v) => !v)}>
@@ -286,7 +341,7 @@ export default function AdminOrganizationsPage() {
       </div>
 
       {message && (
-        <p className={message.toLowerCase().includes("erro") ? "error" : "success"}>
+        <p className={message.toLowerCase().includes("erro") || message.toLowerCase().includes("falhou") ? "error" : "success"}>
           {message}
         </p>
       )}
@@ -325,11 +380,7 @@ export default function AdminOrganizationsPage() {
 
             <div>
               <label>CNPJ</label>
-              <input
-                value={document}
-                onChange={(e) => setDocument(e.target.value)}
-                required
-              />
+              <input value={document} onChange={(e) => setDocument(e.target.value)} required />
             </div>
 
             <div>
@@ -339,7 +390,7 @@ export default function AdminOrganizationsPage() {
 
             <div>
               <label>CNAE Principal</label>
-              <input value={cnae} onChange={(e) => setCnae(e.target.value)} />
+              <input value={cnae} onChange={(e) => setCnae(e.target.value)} placeholder="Ex.: 8299-7/99 - descrição" />
             </div>
 
             <div
@@ -375,7 +426,7 @@ export default function AdminOrganizationsPage() {
       )}
 
       <section className="card">
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
           <button className={status === "all" ? "btn-active" : "btn-ghost"} onClick={() => setStatus("all")}>
             Todas
           </button>
@@ -390,55 +441,119 @@ export default function AdminOrganizationsPage() {
           </button>
         </div>
 
-        <ul className="list">
-          {filtered.map((o, i) => (
-            <li key={o.id}>
-              <div style={{ display: "grid", gap: 8 }}>
-                <div>
-                  <strong>
-                    {i + 1}. {o.name}
-                  </strong>{" "}
-                  <span className="muted">({orgStatusLabel(o.status)})</span>
+        {loadingPage ? (
+          <p>Carregando organizações...</p>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gap: 14,
+            }}
+          >
+            {filtered.map((o) => (
+              <section
+                key={o.id}
+                className="card"
+                style={{
+                  marginBottom: 0,
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                <div style={{ display: "grid", gap: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                    <div>
+                      <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.2 }}>
+                        {o.name}
+                      </div>
+                      <div className="muted" style={{ marginTop: 6 }}>
+                        ID #{o.id}
+                      </div>
+                    </div>
+
+                    <span
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: 999,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        background: `${statusColor(o.status)}20`,
+                        color: statusColor(o.status),
+                        border: `1px solid ${statusColor(o.status)}`,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {orgStatusLabel(o.status)}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "grid", gap: 6 }}>
+                    <div>
+                      <strong>CNPJ:</strong>{" "}
+                      <span className="muted">{o.document || "não informado"}</span>
+                    </div>
+
+                    <div>
+                      <strong>CNAE:</strong>{" "}
+                      <span className="muted">{shortText(o.cnae || "não informado", 72)}</span>
+                    </div>
+
+                    <div>
+                      <strong>Abertura:</strong>{" "}
+                      <span className="muted">{formatDateBR(o.opening_date) || "não informado"}</span>
+                    </div>
+
+                    <div>
+                      <strong>Endereço:</strong>{" "}
+                      <span className="muted">{shortText(o.address || "não informado", 88)}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+                    <Link className="btn-ghost" href={`/admin/organizations/${o.id}`}>
+                      Gerenciar
+                    </Link>
+
+                    {o.status === "trashed" ? (
+                      <>
+                        <button className="btn-ghost" onClick={() => restoreOrg(o.id)}>
+                          Restaurar
+                        </button>
+
+                        <button
+                          className="btn-ghost"
+                          onClick={() => permanentlyDeleteOrg(o.id, o.name)}
+                        >
+                          Excluir permanentemente
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          className="btn-ghost"
+                          onClick={() => toggleOrgStatus(o.id, o.status)}
+                        >
+                          {o.status === "active" ? "Pausar" : "Ativar"}
+                        </button>
+
+                        <button className="btn-ghost" onClick={() => moveOrgToTrash(o.id)}>
+                          Lixeira
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
+              </section>
+            ))}
 
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <Link className="btn-ghost" href={`/admin/organizations/${o.id}`}>
-                    Ver Detalhes
-                  </Link>
-
-                  {o.status === "trashed" ? (
-                    <>
-                      <button className="btn-ghost" onClick={() => restoreOrg(o.id)}>
-                        Restaurar
-                      </button>
-                      <button
-                        className="btn-ghost"
-                        onClick={() => permanentlyDeleteOrg(o.id, o.name)}
-                      >
-                        Excluir Permanentemente
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        className="btn-ghost"
-                        onClick={() => toggleOrgStatus(o.id, o.status)}
-                      >
-                        {o.status === "active" ? "Pausar" : "Ativar"}
-                      </button>
-
-                      <button className="btn-ghost" onClick={() => moveOrgToTrash(o.id)}>
-                        Lixeira
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </li>
-          ))}
-
-          {!filtered.length && <li>Nenhuma organização encontrada.</li>}
-        </ul>
+            {!filtered.length && (
+              <section className="card" style={{ marginBottom: 0 }}>
+                Nenhuma organização encontrada.
+              </section>
+            )}
+          </div>
+        )}
       </section>
     </main>
   );
