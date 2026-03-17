@@ -15,6 +15,7 @@ type Org = {
   cnae?: string;
   opening_date?: string;
   regime?: string;
+  created_at?: string;
 };
 
 type Lot = {
@@ -45,6 +46,22 @@ type Cred = {
   recipient_name: string;
   course_name: string;
   status: string;
+};
+
+type CnpjLookup = {
+  cnpj?: string;
+  razao_social?: string;
+  nome_fantasia?: string;
+  data_inicio_atividade?: string;
+  logradouro?: string;
+  numero?: string;
+  bairro?: string;
+  complemento?: string;
+  municipio?: string;
+  uf?: string;
+  cep?: string;
+  natureza_juridica?: string;
+  cnae_fiscal_descricao?: string;
 };
 
 type TabKey = "overview" | "active" | "revoked" | "notes" | "trash";
@@ -80,6 +97,37 @@ function getStatusLabel(status: string) {
   return map[status] || status;
 }
 
+function formatDateBR(value?: string) {
+  if (!value) return "não informado";
+  const v = value.trim();
+  if (!v) return "não informado";
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const [y, m, d] = v.split("-");
+    return `${d}/${m}/${y}`;
+  }
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) return v;
+
+  return v;
+}
+
+function joinAddress(data: CnpjLookup) {
+  const parts = [
+    data.logradouro,
+    data.numero,
+    data.bairro,
+    data.complemento,
+    data.municipio,
+    data.uf,
+    data.cep,
+  ]
+    .map((x) => (x || "").trim())
+    .filter(Boolean);
+
+  return parts.join(", ");
+}
+
 export default function OrganizationDetailsPage({
   params,
 }: {
@@ -96,6 +144,7 @@ export default function OrganizationDetailsPage({
   const [noteTitle, setNoteTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState("");
+  const [isBusy, setIsBusy] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
@@ -109,6 +158,7 @@ export default function OrganizationDetailsPage({
   const [lotTitle, setLotTitle] = useState("");
   const [lotDescription, setLotDescription] = useState("");
   const [lotQuantity, setLotQuantity] = useState("");
+  const [lotIssueWindowDays, setLotIssueWindowDays] = useState("365");
 
   const orgId = Number(params.id);
 
@@ -178,6 +228,53 @@ export default function OrganizationDetailsPage({
     [credentials]
   );
 
+  async function lookupCnpjAndFill() {
+    const raw = (editDocument || "").replace(/\D/g, "");
+    if (raw.length !== 14) {
+      setMessage("Informe um CNPJ válido com 14 dígitos.");
+      return;
+    }
+
+    setIsBusy(true);
+    try {
+      const data = (await apiGet(`/api/v1/organizations/cnpj/${raw}`)) as CnpjLookup;
+
+      setEditName(
+        data.razao_social?.trim() ||
+          data.nome_fantasia?.trim() ||
+          editName
+      );
+
+      const fullAddress = joinAddress(data);
+      if (fullAddress) setEditAddress(fullAddress);
+
+      if (data.cnae_fiscal_descricao) setEditCnae(data.cnae_fiscal_descricao);
+      if (data.data_inicio_atividade) setEditOpeningDate(data.data_inicio_atividade);
+      if (data.natureza_juridica) setEditRegime(data.natureza_juridica);
+
+      setMessage("Dados do CNPJ carregados com sucesso.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao consultar CNPJ.";
+      setMessage(msg);
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function runOrganizationMigration() {
+    setIsBusy(true);
+    try {
+      await apiPost("/api/v1/organizations/migrate/add-fields", {});
+      setMessage("Migração executada com sucesso. Agora salve novamente a organização.");
+      await loadAll();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao executar migração.";
+      setMessage(msg);
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   async function deactivateOrganization() {
     if (!org) return;
     const ok = window.confirm(`Pausar organização ${org.name}?`);
@@ -186,7 +283,7 @@ export default function OrganizationDetailsPage({
     try {
       await apiPost(`/api/v1/organizations/${org.id}/deactivate`, {});
       setMessage("Organização pausada com sucesso.");
-      setOrg({ ...org, status: "inactive" });
+      await loadAll();
     } catch {
       setMessage("Erro ao pausar organização.");
     }
@@ -200,7 +297,7 @@ export default function OrganizationDetailsPage({
     try {
       await apiPost(`/api/v1/organizations/${org.id}/activate`, {});
       setMessage("Organização ativada com sucesso.");
-      setOrg({ ...org, status: "active" });
+      await loadAll();
     } catch {
       setMessage("Erro ao ativar organização.");
     }
@@ -216,9 +313,27 @@ export default function OrganizationDetailsPage({
     try {
       await apiDelete(`/api/v1/organizations/${org.id}`);
       setMessage("Organização movida para lixeira.");
-      setOrg({ ...org, status: "trashed" });
+      await loadAll();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao mover para lixeira.";
+      setMessage(msg);
+    }
+  }
+
+  async function permanentDeleteOrganization() {
+    if (!org) return;
+    const ack = window.prompt(
+      `EXCLUSÃO PERMANENTE de ${org.name}. Digite APAGAR PERMANENTEMENTE para confirmar:`
+    );
+    if (ack !== "APAGAR PERMANENTEMENTE") return;
+
+    try {
+      await apiDelete(`/api/v1/organizations/${org.id}?force=true`);
+      setMessage("Organização excluída permanentemente.");
+      router.push("/admin/organizations");
+    } catch (e) {
+      const msg =
+        e instanceof Error ? e.message : "Erro ao excluir permanentemente.";
       setMessage(msg);
     }
   }
@@ -228,7 +343,7 @@ export default function OrganizationDetailsPage({
     try {
       await apiPost(`/api/v1/organizations/${org.id}/restore`, {});
       setMessage("Organização restaurada.");
-      setOrg({ ...org, status: "active" });
+      await loadAll();
     } catch {
       setMessage("Erro ao restaurar organização.");
     }
@@ -371,8 +486,9 @@ export default function OrganizationDetailsPage({
       setMessage("Organização atualizada com sucesso!");
       setIsEditing(false);
       await loadAll();
-    } catch {
-      setMessage("Erro ao atualizar organização.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao atualizar organização.";
+      setMessage(msg);
     }
   }
 
@@ -380,8 +496,15 @@ export default function OrganizationDetailsPage({
     e.preventDefault();
 
     const qty = Number(lotQuantity);
+    const issueWindow = Number(lotIssueWindowDays);
+
     if (!qty || qty <= 0) {
-      setMessage("Quantidade deve ser maior que 0");
+      setMessage("Quantidade deve ser maior que 0.");
+      return;
+    }
+
+    if (!issueWindow || issueWindow <= 0) {
+      setMessage("Janela de emissão deve ser maior que 0.");
       return;
     }
 
@@ -391,15 +514,20 @@ export default function OrganizationDetailsPage({
         title: lotTitle || `Lote ${new Date().toLocaleDateString("pt-BR")}`,
         description: lotDescription,
         total_badges: qty,
+        issue_window_days: issueWindow,
       });
+
       setMessage("Lote criado com sucesso!");
       setShowCreateLot(false);
       setLotTitle("");
       setLotDescription("");
       setLotQuantity("");
+      setLotIssueWindowDays("365");
       await loadAll();
-    } catch {
-      setMessage("Erro ao criar lote.");
+      setTab("overview");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao criar lote.";
+      setMessage(msg);
     }
   }
 
@@ -450,10 +578,21 @@ export default function OrganizationDetailsPage({
 
               <div>
                 <label>CNPJ</label>
-                <input
-                  value={editDocument}
-                  onChange={(e) => setEditDocument(e.target.value)}
-                />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    value={editDocument}
+                    onChange={(e) => setEditDocument(e.target.value)}
+                    placeholder="Somente números ou CNPJ formatado"
+                  />
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={lookupCnpjAndFill}
+                    disabled={isBusy}
+                  >
+                    Buscar CNPJ
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -484,6 +623,7 @@ export default function OrganizationDetailsPage({
                   <input
                     value={editOpeningDate}
                     onChange={(e) => setEditOpeningDate(e.target.value)}
+                    placeholder="AAAA-MM-DD ou DD/MM/AAAA"
                   />
                 </div>
               </div>
@@ -497,8 +637,15 @@ export default function OrganizationDetailsPage({
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
               <button type="submit">Salvar Alterações</button>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={runOrganizationMigration}
+              >
+                Rodar migração
+              </button>
               <button
                 type="button"
                 className="btn-ghost"
@@ -521,7 +668,7 @@ export default function OrganizationDetailsPage({
                 <input
                   value={lotTitle}
                   onChange={(e) => setLotTitle(e.target.value)}
-                  placeholder="Ex: Lote Março 2024"
+                  placeholder="Ex: Lote Março 2026"
                 />
               </div>
 
@@ -534,16 +681,36 @@ export default function OrganizationDetailsPage({
                 />
               </div>
 
-              <div>
-                <label>Quantidade de Badges *</label>
-                <input
-                  type="number"
-                  value={lotQuantity}
-                  onChange={(e) => setLotQuantity(e.target.value)}
-                  placeholder="100"
-                  required
-                  min="1"
-                />
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <label>Quantidade de Badges *</label>
+                  <input
+                    type="number"
+                    value={lotQuantity}
+                    onChange={(e) => setLotQuantity(e.target.value)}
+                    placeholder="100"
+                    required
+                    min="1"
+                  />
+                </div>
+
+                <div>
+                  <label>Janela de emissão em dias *</label>
+                  <input
+                    type="number"
+                    value={lotIssueWindowDays}
+                    onChange={(e) => setLotIssueWindowDays(e.target.value)}
+                    placeholder="365"
+                    required
+                    min="1"
+                  />
+                </div>
               </div>
             </div>
 
@@ -605,7 +772,7 @@ export default function OrganizationDetailsPage({
 
               <div>
                 <strong>Data de abertura:</strong>
-                <div>{org.opening_date || "não informado"}</div>
+                <div>{formatDateBR(org.opening_date)}</div>
               </div>
 
               <div>
@@ -643,6 +810,15 @@ export default function OrganizationDetailsPage({
               <button className="btn-ghost" onClick={deleteOrganization}>
                 🗑️ Lixeira
               </button>
+
+              {org.status === "trashed" && (
+                <button
+                  className="btn-ghost"
+                  onClick={permanentDeleteOrganization}
+                >
+                  ❌ Excluir permanentemente
+                </button>
+              )}
             </div>
           </section>
 
