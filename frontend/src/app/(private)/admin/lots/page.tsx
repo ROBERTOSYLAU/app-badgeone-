@@ -97,28 +97,21 @@ export default function AdminLotsPage() {
 
   async function loadData() {
     setLoading(true);
+    setMessage("");
+
     try {
-      const [lRes, oRes] = await Promise.allSettled([
+      const [lRes, oRes] = await Promise.all([
         apiGet("/api/v1/lots"),
         apiGet("/api/v1/organizations"),
       ]);
 
-      if (lRes.status === "fulfilled") {
-        setLots((lRes.value as Lot[]) || []);
-      } else {
-        console.error("Erro ao carregar lotes:", lRes.reason);
-        setLots([]);
-      }
-
-      if (oRes.status === "fulfilled") {
-        setOrgs((oRes.value as Org[]) || []);
-      } else {
-        console.error("Erro ao carregar organizações:", oRes.reason);
-        setOrgs([]);
-      }
+      setLots((lRes as Lot[]) || []);
+      setOrgs((oRes as Org[]) || []);
     } catch (e) {
-      console.error("Erro geral ao carregar tela de lotes:", e);
-      setMessage("Erro ao carregar dados.");
+      const msg = e instanceof Error ? e.message : "Erro ao carregar dados de lotes.";
+      setMessage(msg);
+      setLots([]);
+      setOrgs([]);
     } finally {
       setLoading(false);
     }
@@ -137,12 +130,14 @@ export default function AdminLotsPage() {
 
   async function createLot(e: React.FormEvent) {
     e.preventDefault();
+    setMessage("");
 
     const qty = Number(lotQuantity);
     const issueWindow = Number(lotIssueWindowDays);
+    const orgId = Number(selectedOrg);
 
-    if (!selectedOrg) {
-      setMessage("Selecione uma organização.");
+    if (!selectedOrg || Number.isNaN(orgId) || orgId <= 0) {
+      setMessage("Selecione uma organização válida.");
       return;
     }
 
@@ -158,9 +153,9 @@ export default function AdminLotsPage() {
 
     try {
       await apiPost("/api/v1/lots", {
-        organization_id: Number(selectedOrg),
-        title: lotTitle || `Lote ${new Date().toLocaleDateString("pt-BR")}`,
-        description: lotDescription,
+        organization_id: orgId,
+        title: lotTitle.trim() || `Lote ${new Date().toLocaleDateString("pt-BR")}`,
+        description: lotDescription.trim() || null,
         total_badges: qty,
         issue_window_days: issueWindow,
       });
@@ -265,6 +260,9 @@ export default function AdminLotsPage() {
           <button className="btn-ghost" onClick={() => setShowCreateForm((v) => !v)}>
             {showCreateForm ? "Cancelar" : "+ Criar Lote"}
           </button>
+          <button className="btn-ghost" onClick={() => loadData()}>
+            Atualizar
+          </button>
           <button className="btn-ghost" onClick={() => router.back()}>
             ← Voltar
           </button>
@@ -272,7 +270,9 @@ export default function AdminLotsPage() {
       </div>
 
       {message && (
-        <p className={message.includes("Erro") ? "error" : "success"}>{message}</p>
+        <p className={message.toLowerCase().includes("falhou") || message.toLowerCase().includes("erro") ? "error" : "success"}>
+          {message}
+        </p>
       )}
 
       {showCreateForm && (
@@ -297,16 +297,11 @@ export default function AdminLotsPage() {
               >
                 <option value="">Selecione uma organização</option>
                 {availableOrganizations.map((o) => (
-                  <option key={o.id} value={o.id}>
+                  <option key={o.id} value={String(o.id)}>
                     {o.name} {o.document ? `| ${o.document}` : ""}
                   </option>
                 ))}
               </select>
-              {availableOrganizations.length === 0 && (
-                <p className="muted" style={{ marginTop: 8 }}>
-                  Nenhuma organização disponível. Cadastre ou restaure uma organização primeiro.
-                </p>
-              )}
             </div>
 
             <div>
@@ -361,11 +356,7 @@ export default function AdminLotsPage() {
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="submit">Criar Lote</button>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => setShowCreateForm(false)}
-              >
+              <button type="button" className="btn-ghost" onClick={() => setShowCreateForm(false)}>
                 Cancelar
               </button>
             </div>
