@@ -26,7 +26,7 @@ type Lot = {
   total_badges: number;
   issued: number;
   remaining: number;
-  issue_window_days: number;
+  issue_window_days?: number;
   status: string;
 };
 
@@ -112,6 +112,19 @@ function formatDateBR(value?: string) {
   return v;
 }
 
+function normalizeDateForApi(value?: string) {
+  if (!value) return "";
+  const v = value.trim();
+  if (!v) return "";
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
+    const [d, m, y] = v.split("/");
+    return `${y}-${m}-${d}`;
+  }
+
+  return v;
+}
+
 function joinAddress(data: CnpjLookup) {
   const parts = [
     data.logradouro,
@@ -162,37 +175,48 @@ export default function OrganizationDetailsPage({
 
   const orgId = Number(params.id);
 
+  function setApiError(prefix: string, err: unknown) {
+    const msg = err instanceof Error ? err.message : prefix;
+    setMessage(msg || prefix);
+  }
+
   async function loadAll() {
-    try {
-      const orgs = await apiGet("/api/v1/organizations");
-      const foundOrg = ((orgs as Org[]) || []).find((o) => o.id === orgId) || null;
+    const [orgsRes, lotsRes, notesRes, credsRes] = await Promise.allSettled([
+      apiGet("/api/v1/organizations"),
+      apiGet("/api/v1/lots"),
+      apiGet(`/api/v1/organization-notes/${orgId}`),
+      apiGet(`/api/v1/credentials?organization_id=${orgId}`),
+    ]);
+
+    if (orgsRes.status === "fulfilled") {
+      const foundOrg =
+        ((orgsRes.value as Org[]) || []).find((o) => o.id === orgId) || null;
       setOrg(foundOrg);
-    } catch (e) {
-      console.error("Erro ao carregar organização:", e);
+    } else {
+      console.error("Erro ao carregar organização:", orgsRes.reason);
       setOrg(null);
     }
 
-    try {
-      const allLots = await apiGet("/api/v1/lots");
-      setLots(((allLots as Lot[]) || []).filter((l) => l.organization_id === orgId));
-    } catch (e) {
-      console.error("Erro ao carregar lotes:", e);
+    if (lotsRes.status === "fulfilled") {
+      setLots(
+        ((lotsRes.value as Lot[]) || []).filter((l) => l.organization_id === orgId)
+      );
+    } else {
+      console.error("Erro ao carregar lotes:", lotsRes.reason);
       setLots([]);
     }
 
-    try {
-      const allNotes = await apiGet(`/api/v1/organization-notes/${orgId}`);
-      setNotesList((allNotes as Note[]) || []);
-    } catch (e) {
-      console.error("Erro ao carregar anotações:", e);
+    if (notesRes.status === "fulfilled") {
+      setNotesList((notesRes.value as Note[]) || []);
+    } else {
+      console.error("Erro ao carregar anotações:", notesRes.reason);
       setNotesList([]);
     }
 
-    try {
-      const creds = await apiGet(`/api/v1/credentials?organization_id=${orgId}`);
-      setCredentials((creds as Cred[]) || []);
-    } catch (e) {
-      console.error("Erro ao carregar credenciais:", e);
+    if (credsRes.status === "fulfilled") {
+      setCredentials((credsRes.value as Cred[]) || []);
+    } else {
+      console.error("Erro ao carregar credenciais:", credsRes.reason);
       setCredentials([]);
     }
   }
@@ -205,7 +229,10 @@ export default function OrganizationDetailsPage({
       return;
     }
 
-    loadAll();
+    loadAll().catch((e) => {
+      console.error("Erro geral na página de organização:", e);
+      setMessage("Erro ao carregar a organização.");
+    });
   }, [user, isLoading, orgId, router]);
 
   const activeLots = useMemo(
@@ -239,11 +266,7 @@ export default function OrganizationDetailsPage({
     try {
       const data = (await apiGet(`/api/v1/organizations/cnpj/${raw}`)) as CnpjLookup;
 
-      setEditName(
-        data.razao_social?.trim() ||
-          data.nome_fantasia?.trim() ||
-          editName
-      );
+      setEditName(data.razao_social?.trim() || data.nome_fantasia?.trim() || editName);
 
       const fullAddress = joinAddress(data);
       if (fullAddress) setEditAddress(fullAddress);
@@ -254,8 +277,7 @@ export default function OrganizationDetailsPage({
 
       setMessage("Dados do CNPJ carregados com sucesso.");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao consultar CNPJ.";
-      setMessage(msg);
+      setApiError("Erro ao consultar CNPJ.", e);
     } finally {
       setIsBusy(false);
     }
@@ -268,8 +290,7 @@ export default function OrganizationDetailsPage({
       setMessage("Migração executada com sucesso. Agora salve novamente a organização.");
       await loadAll();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao executar migração.";
-      setMessage(msg);
+      setApiError("Erro ao executar migração.", e);
     } finally {
       setIsBusy(false);
     }
@@ -277,75 +298,74 @@ export default function OrganizationDetailsPage({
 
   async function deactivateOrganization() {
     if (!org) return;
-    const ok = window.confirm(`Pausar organização ${org.name}?`);
+    const ok = window.confirm(`Tem certeza que deseja pausar a organização ${org.name}?`);
     if (!ok) return;
 
     try {
       await apiPost(`/api/v1/organizations/${org.id}/deactivate`, {});
       setMessage("Organização pausada com sucesso.");
       await loadAll();
-    } catch {
-      setMessage("Erro ao pausar organização.");
+    } catch (e) {
+      setApiError("Erro ao pausar organização.", e);
     }
   }
 
   async function activateOrganization() {
     if (!org) return;
-    const ok = window.confirm(`Ativar organização ${org.name}?`);
+    const ok = window.confirm(`Tem certeza que deseja ativar a organização ${org.name}?`);
     if (!ok) return;
 
     try {
       await apiPost(`/api/v1/organizations/${org.id}/activate`, {});
       setMessage("Organização ativada com sucesso.");
       await loadAll();
-    } catch {
-      setMessage("Erro ao ativar organização.");
+    } catch (e) {
+      setApiError("Erro ao ativar organização.", e);
     }
   }
 
   async function deleteOrganization() {
     if (!org) return;
-    const ack = window.prompt(
-      `Mover organização ${org.name} para lixeira. Digite EXCLUIR para confirmar:`
-    );
-    if (ack !== "EXCLUIR") return;
+    const ok = window.confirm(`Tem certeza que deseja mover ${org.name} para a lixeira?`);
+    if (!ok) return;
 
     try {
       await apiDelete(`/api/v1/organizations/${org.id}`);
       setMessage("Organização movida para lixeira.");
       await loadAll();
+      setTab("trash");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao mover para lixeira.";
-      setMessage(msg);
+      setApiError("Erro ao mover para lixeira.", e);
     }
   }
 
   async function permanentDeleteOrganization() {
     if (!org) return;
-    const ack = window.prompt(
-      `EXCLUSÃO PERMANENTE de ${org.name}. Digite APAGAR PERMANENTEMENTE para confirmar:`
+    const ok = window.confirm(
+      `Tem certeza que deseja excluir permanentemente ${org.name}? Esta ação não poderá ser desfeita.`
     );
-    if (ack !== "APAGAR PERMANENTEMENTE") return;
+    if (!ok) return;
 
     try {
       await apiDelete(`/api/v1/organizations/${org.id}?force=true`);
-      setMessage("Organização excluída permanentemente.");
       router.push("/admin/organizations");
     } catch (e) {
-      const msg =
-        e instanceof Error ? e.message : "Erro ao excluir permanentemente.";
-      setMessage(msg);
+      setApiError("Erro ao excluir permanentemente.", e);
     }
   }
 
   async function restoreOrganization() {
     if (!org) return;
+    const ok = window.confirm(`Tem certeza que deseja restaurar ${org.name}?`);
+    if (!ok) return;
+
     try {
       await apiPost(`/api/v1/organizations/${org.id}/restore`, {});
       setMessage("Organização restaurada.");
       await loadAll();
-    } catch {
-      setMessage("Erro ao restaurar organização.");
+      setTab("overview");
+    } catch (e) {
+      setApiError("Erro ao restaurar organização.", e);
     }
   }
 
@@ -361,20 +381,21 @@ export default function OrganizationDetailsPage({
       setNoteTitle("");
       setNotes("");
       await loadAll();
-    } catch {
-      setMessage("Erro ao salvar anotação.");
+    } catch (e) {
+      setApiError("Erro ao salvar anotação.", e);
     }
   }
 
   async function removeNote(noteId: number) {
-    if (!window.confirm("Remover anotação?")) return;
+    const ok = window.confirm("Tem certeza que deseja remover esta anotação?");
+    if (!ok) return;
 
     try {
       await apiDelete(`/api/v1/organization-notes/${noteId}`);
       await loadAll();
       setMessage("Anotação removida.");
-    } catch {
-      setMessage("Erro ao remover anotação.");
+    } catch (e) {
+      setApiError("Erro ao remover anotação.", e);
     }
   }
 
@@ -387,66 +408,65 @@ export default function OrganizationDetailsPage({
       await loadAll();
       setMessage("Lote atualizado.");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao atualizar lote.";
-      setMessage(msg);
+      setApiError("Erro ao atualizar lote.", e);
     }
+  }
+
+  async function moveLotToTrash(l: Lot) {
+    const ok = window.confirm(`Tem certeza que deseja mover o lote ${l.title || "#" + l.id} para a lixeira?`);
+    if (!ok) return;
+    await updateLot(l.id, { status: "trashed" });
   }
 
   async function revokeLotFlow(l: Lot) {
-    const mode = window.prompt(
-      "Tipo de revogação: FULL (total) ou PARTIAL (parcial)",
-      "PARTIAL"
+    const full = window.confirm(
+      `Deseja revogar totalmente o lote ${l.title || "#" + l.id}?\n\nClique em OK para revogação total.\nClique em Cancelar para revogação parcial.`
     );
-    if (!mode) return;
 
-    const up = mode.toUpperCase();
-
-    if (up === "FULL") {
-      const ack = window.prompt("Digite REVOGAR para confirmar revogação TOTAL");
-      if (ack !== "REVOGAR") return;
-
-      await apiPost(`/api/v1/lots/${l.id}/revoke`, { mode: "full" });
-      await loadAll();
-      setMessage("Lote revogado totalmente.");
+    if (full) {
+      try {
+        await apiPost(`/api/v1/lots/${l.id}/revoke`, { mode: "full" });
+        await loadAll();
+        setMessage("Lote revogado totalmente.");
+      } catch (e) {
+        setApiError("Erro ao revogar lote.", e);
+      }
       return;
     }
 
-    const qtyInput = window.prompt(
-      "Quantidade a revogar (somente saldo não emitido)",
-      "1"
-    );
+    const qtyInput = window.prompt("Informe a quantidade para revogação parcial:", "1");
     const qty = Number(qtyInput);
     if (Number.isNaN(qty) || qty <= 0) return;
 
-    const ack = window.prompt(
-      `Digite REVOGAR para confirmar revogação parcial de ${qty}`
-    );
-    if (ack !== "REVOGAR") return;
-
-    await apiPost(`/api/v1/lots/${l.id}/revoke`, {
-      mode: "partial",
-      quantity: qty,
-    });
-    await loadAll();
-    setMessage("Revogação parcial concluída.");
+    try {
+      await apiPost(`/api/v1/lots/${l.id}/revoke`, {
+        mode: "partial",
+        quantity: qty,
+      });
+      await loadAll();
+      setMessage("Revogação parcial concluída.");
+    } catch (e) {
+      setApiError("Erro ao revogar lote parcialmente.", e);
+    }
   }
 
   async function recoverLotFlow(l: Lot) {
-    const ack = window.prompt(
-      `Digite RECUPERAR para confirmar recuperação do lote ${l.title || "#" + l.id}`
-    );
-    if (ack !== "RECUPERAR") return;
+    const ok = window.confirm(`Tem certeza que deseja recuperar o lote ${l.title || "#" + l.id}?`);
+    if (!ok) return;
 
-    const qtyInput = window.prompt("Quantidade para recuperar (opcional)", "0");
-    const qty =
-      qtyInput && !Number.isNaN(Number(qtyInput)) ? Number(qtyInput) : 0;
+    const qtyInput = window.prompt("Quantidade para recuperar (opcional):", "0");
+    const qty = qtyInput && !Number.isNaN(Number(qtyInput)) ? Number(qtyInput) : 0;
 
-    await apiPost(`/api/v1/lots/${l.id}/recover`, {
-      quantity: qty,
-      to_status: "active",
-    });
-    await loadAll();
-    setMessage("Lote recuperado com sucesso.");
+    try {
+      await apiPost(`/api/v1/lots/${l.id}/recover`, {
+        quantity: qty,
+        to_status: "active",
+      });
+      await loadAll();
+      setMessage("Lote recuperado com sucesso.");
+    } catch (e) {
+      setApiError("Erro ao recuperar lote.", e);
+    }
   }
 
   async function updateCredential(credentialId: number, status: string) {
@@ -455,9 +475,20 @@ export default function OrganizationDetailsPage({
       await loadAll();
       setMessage("Credencial atualizada.");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao atualizar credencial.";
-      setMessage(msg);
+      setApiError("Erro ao atualizar credencial.", e);
     }
+  }
+
+  async function trashCredential(credentialId: number) {
+    const ok = window.confirm("Tem certeza que deseja mover esta credencial para a lixeira?");
+    if (!ok) return;
+    await updateCredential(credentialId, "trashed");
+  }
+
+  async function revokeCredential(credentialId: number) {
+    const ok = window.confirm("Tem certeza que deseja revogar esta credencial?");
+    if (!ok) return;
+    await updateCredential(credentialId, "revoked");
   }
 
   function startEditing() {
@@ -466,9 +497,10 @@ export default function OrganizationDetailsPage({
     setEditDocument(org.document || "");
     setEditAddress(org.address || "");
     setEditCnae(org.cnae || "");
-    setEditOpeningDate(org.opening_date || "");
+    setEditOpeningDate(org.opening_date ? formatDateBR(org.opening_date) : "");
     setEditRegime(org.regime || "");
     setIsEditing(true);
+    setShowCreateLot(false);
   }
 
   async function saveEdit(e: React.FormEvent) {
@@ -476,24 +508,33 @@ export default function OrganizationDetailsPage({
 
     try {
       await apiPatch(`/api/v1/organizations/${orgId}`, {
-        name: editName,
-        document: editDocument,
-        address: editAddress,
-        cnae: editCnae,
-        opening_date: editOpeningDate,
-        regime: editRegime,
+        name: editName.trim(),
+        document: editDocument.trim(),
+        address: editAddress.trim(),
+        cnae: editCnae.trim(),
+        opening_date: normalizeDateForApi(editOpeningDate),
+        regime: editRegime.trim(),
       });
       setMessage("Organização atualizada com sucesso!");
       setIsEditing(false);
       await loadAll();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao atualizar organização.";
-      setMessage(msg);
+      setApiError("Erro ao atualizar organização.", e);
     }
   }
 
   async function createLot(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!org) {
+      setMessage("Organização não encontrada.");
+      return;
+    }
+
+    if (org.status === "trashed") {
+      setMessage("Não é possível criar lote para organização na lixeira.");
+      return;
+    }
 
     const qty = Number(lotQuantity);
     const issueWindow = Number(lotIssueWindowDays);
@@ -511,8 +552,8 @@ export default function OrganizationDetailsPage({
     try {
       await apiPost("/api/v1/lots", {
         organization_id: orgId,
-        title: lotTitle || `Lote ${new Date().toLocaleDateString("pt-BR")}`,
-        description: lotDescription,
+        title: lotTitle.trim() || `Lote ${new Date().toLocaleDateString("pt-BR")}`,
+        description: lotDescription.trim(),
         total_badges: qty,
         issue_window_days: issueWindow,
       });
@@ -526,21 +567,36 @@ export default function OrganizationDetailsPage({
       await loadAll();
       setTab("overview");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao criar lote.";
-      setMessage(msg);
+      setApiError("Erro ao criar lote.", e);
     }
   }
+
+  const totalIssued = useMemo(
+    () => lots.reduce((a, b) => a + (b.issued || 0), 0),
+    [lots]
+  );
+
+  const totalRemaining = useMemo(
+    () => lots.reduce((a, b) => a + (b.remaining || 0), 0),
+    [lots]
+  );
 
   return (
     <main className="container">
       <div className="header-row">
         <h1>Organização</h1>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
             className="btn-ghost"
             onClick={() => router.push("/admin/organizations")}
           >
             ← Voltar
+          </button>
+          <button
+            className="btn-ghost"
+            onClick={() => loadAll()}
+          >
+            Atualizar
           </button>
           <button
             className="btn-ghost"
@@ -557,7 +613,7 @@ export default function OrganizationDetailsPage({
       {!org && <p className="error">Organização não encontrada.</p>}
 
       {message && (
-        <p className={message.includes("Erro") ? "error" : "success"}>
+        <p className={message.toLowerCase().includes("erro") ? "error" : "success"}>
           {message}
         </p>
       )}
@@ -578,7 +634,7 @@ export default function OrganizationDetailsPage({
 
               <div>
                 <label>CNPJ</label>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <input
                     value={editDocument}
                     onChange={(e) => setEditDocument(e.target.value)}
@@ -615,6 +671,7 @@ export default function OrganizationDetailsPage({
                   <input
                     value={editCnae}
                     onChange={(e) => setEditCnae(e.target.value)}
+                    placeholder="Descrição do CNAE"
                   />
                 </div>
 
@@ -623,7 +680,7 @@ export default function OrganizationDetailsPage({
                   <input
                     value={editOpeningDate}
                     onChange={(e) => setEditOpeningDate(e.target.value)}
-                    placeholder="AAAA-MM-DD ou DD/MM/AAAA"
+                    placeholder="DD/MM/AAAA ou AAAA-MM-DD"
                   />
                 </div>
               </div>
@@ -638,11 +695,14 @@ export default function OrganizationDetailsPage({
             </div>
 
             <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-              <button type="submit">Salvar Alterações</button>
+              <button type="submit" disabled={isBusy}>
+                Salvar Alterações
+              </button>
               <button
                 type="button"
                 className="btn-ghost"
                 onClick={runOrganizationMigration}
+                disabled={isBusy}
               >
                 Rodar migração
               </button>
@@ -663,6 +723,11 @@ export default function OrganizationDetailsPage({
           <h2>Criar Lote</h2>
           <form onSubmit={createLot}>
             <div style={{ display: "grid", gap: 12 }}>
+              <div>
+                <label>Organização</label>
+                <input value={org.name} disabled />
+              </div>
+
               <div>
                 <label>Título do Lote (opcional)</label>
                 <input
@@ -714,8 +779,10 @@ export default function OrganizationDetailsPage({
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-              <button type="submit">Criar Lote</button>
+            <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+              <button type="submit" disabled={isBusy}>
+                Criar Lote
+              </button>
               <button
                 type="button"
                 className="btn-ghost"
@@ -766,7 +833,7 @@ export default function OrganizationDetailsPage({
               </div>
 
               <div>
-                <strong>CNAE:</strong>
+                <strong>CNAE principal:</strong>
                 <div>{org.cnae || "não informado"}</div>
               </div>
 
@@ -786,12 +853,17 @@ export default function OrganizationDetailsPage({
                 ✏️ Editar
               </button>
 
-              <button
-                className="btn-ghost"
-                onClick={() => setShowCreateLot(true)}
-              >
-                📦 Criar Lote
-              </button>
+              {org.status !== "trashed" && (
+                <button
+                  className="btn-ghost"
+                  onClick={() => {
+                    setShowCreateLot(true);
+                    setIsEditing(false);
+                  }}
+                >
+                  📦 Criar Lote
+                </button>
+              )}
 
               {org.status === "active" ? (
                 <button className="btn-ghost" onClick={deactivateOrganization}>
@@ -807,9 +879,11 @@ export default function OrganizationDetailsPage({
                 </button>
               )}
 
-              <button className="btn-ghost" onClick={deleteOrganization}>
-                🗑️ Lixeira
-              </button>
+              {org.status !== "trashed" && (
+                <button className="btn-ghost" onClick={deleteOrganization}>
+                  🗑️ Lixeira
+                </button>
+              )}
 
               {org.status === "trashed" && (
                 <button
@@ -867,12 +941,10 @@ export default function OrganizationDetailsPage({
                     <strong>Total de lotes:</strong> {lots.length}
                   </p>
                   <p>
-                    <strong>Total emitido:</strong>{" "}
-                    {lots.reduce((a, b) => a + b.issued, 0)}
+                    <strong>Total emitido:</strong> {totalIssued}
                   </p>
                   <p>
-                    <strong>Saldo total:</strong>{" "}
-                    {lots.reduce((a, b) => a + b.remaining, 0)}
+                    <strong>Saldo total:</strong> {totalRemaining}
                   </p>
                 </div>
 
@@ -906,7 +978,7 @@ export default function OrganizationDetailsPage({
                         <span className="muted">
                           {" "}
                           | Total {l.total_badges} | Emitidos {l.issued} | Saldo{" "}
-                          {l.remaining}
+                          {l.remaining} | Janela {l.issue_window_days || 0} dias
                         </span>
 
                         {l.description ? <p className="muted">{l.description}</p> : null}
@@ -949,7 +1021,7 @@ export default function OrganizationDetailsPage({
                           <span className="muted">
                             {" "}
                             | Total {l.total_badges} | Emitidos {l.issued} | Saldo{" "}
-                            {l.remaining}
+                            {l.remaining} | Janela {l.issue_window_days || 0} dias
                           </span>
                         </span>
 
@@ -958,7 +1030,7 @@ export default function OrganizationDetailsPage({
                             className="btn-ghost"
                             onClick={() => router.push(`/admin/lots/${l.id}`)}
                           >
-                            Editar quantidade
+                            Ver detalhes
                           </button>
 
                           {l.status === "active" ? (
@@ -983,13 +1055,7 @@ export default function OrganizationDetailsPage({
 
                           <button
                             className="btn-ghost"
-                            onClick={() => {
-                              const ack = window.prompt(
-                                "Digite EXCLUIR para enviar lote à lixeira"
-                              );
-                              if (ack !== "EXCLUIR") return;
-                              updateLot(l.id, { status: "trashed" });
-                            }}
+                            onClick={() => moveLotToTrash(l)}
                           >
                             Lixeira
                           </button>
@@ -1023,13 +1089,7 @@ export default function OrganizationDetailsPage({
 
                           <button
                             className="btn-ghost"
-                            onClick={() => {
-                              const ack = window.prompt(
-                                "Digite REVOGAR para confirmar revogação da credencial"
-                              );
-                              if (ack !== "REVOGAR") return;
-                              updateCredential(c.id, "revoked");
-                            }}
+                            onClick={() => revokeCredential(c.id)}
                           >
                             Revogar
                           </button>
@@ -1043,13 +1103,7 @@ export default function OrganizationDetailsPage({
 
                           <button
                             className="btn-ghost"
-                            onClick={() => {
-                              const ack = window.prompt(
-                                "Digite EXCLUIR para mover a credencial para lixeira"
-                              );
-                              if (ack !== "EXCLUIR") return;
-                              updateCredential(c.id, "trashed");
-                            }}
+                            onClick={() => trashCredential(c.id)}
                           >
                             Lixeira
                           </button>
@@ -1104,7 +1158,7 @@ export default function OrganizationDetailsPage({
                         className="btn-ghost"
                         onClick={() => router.push(`/admin/lots/${l.id}`)}
                       >
-                        Editar quantidade
+                        Ver detalhes
                       </button>
 
                       <button
@@ -1202,10 +1256,10 @@ export default function OrganizationDetailsPage({
                           | Total {l.total_badges} | Emitidos {l.issued}
                         </span>
 
-                        <div style={{ marginTop: 6 }}>
+                        <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
                           <button
                             className="btn-ghost"
-                            onClick={() => updateLot(l.id, { status: "active" })}
+                            onClick={() => recoverLotFlow(l)}
                           >
                             Restaurar lote
                           </button>
