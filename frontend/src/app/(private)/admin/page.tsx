@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiGet } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth-context";
@@ -18,119 +18,254 @@ type OnboardingStatus = {
   next_step: string;
 };
 
-type Org = { id: number; name: string; status: string };
-type Lot = { id: number; organization_id: number; title?: string; status: string; total_badges: number; issued: number };
+type Org = {
+  id: number;
+  name: string;
+  status: string;
+};
+
+type Lot = {
+  id: number;
+  organization_id: number;
+  title?: string;
+  status: string;
+  total_badges: number;
+  issued: number;
+  remaining?: number;
+  issue_window_days?: number;
+};
+
+type Credential = {
+  id: number;
+  organization_id?: number;
+  lot_id?: number;
+  status?: string;
+};
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+
   const [onboarding, setOnboarding] = useState<OnboardingStatus | null>(null);
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [lots, setLots] = useState<Lot[]>([]);
+  const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
 
   async function loadData() {
+    setLoading(true);
+    setMessage("");
+
     try {
-      const [o, l, ob] = await Promise.all([
+      const [oRes, lRes, obRes, cRes] = await Promise.allSettled([
         apiGet("/api/v1/organizations"),
         apiGet("/api/v1/lots"),
         apiGet("/api/v1/auth/onboarding-status"),
+        apiGet("/api/v1/credentials"),
       ]);
-      console.log("Organizações carregadas:", o.length, o);
-      console.log("Lotes carregados:", l.length, l);
-      console.log("Onboarding:", ob);
-      setOrgs(o);
-      setLots(l);
-      setOnboarding(ob);
+
+      if (oRes.status === "fulfilled") {
+        setOrgs((oRes.value as Org[]) || []);
+      } else {
+        console.error("Erro ao carregar organizações:", oRes.reason);
+        setOrgs([]);
+      }
+
+      if (lRes.status === "fulfilled") {
+        setLots((lRes.value as Lot[]) || []);
+      } else {
+        console.error("Erro ao carregar lotes:", lRes.reason);
+        setLots([]);
+      }
+
+      if (obRes.status === "fulfilled") {
+        setOnboarding((obRes.value as OnboardingStatus) || null);
+      } else {
+        console.error("Erro ao carregar onboarding:", obRes.reason);
+        setOnboarding(null);
+      }
+
+      if (cRes.status === "fulfilled") {
+        setCredentials((cRes.value as Credential[]) || []);
+      } else {
+        console.error("Erro ao carregar credenciais:", cRes.reason);
+        setCredentials([]);
+      }
     } catch (err) {
-      console.error("Erro ao carregar dados:", err);
+      console.error("Erro geral ao carregar dashboard:", err);
+      setMessage("Erro ao carregar dados da dashboard.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isLoading) return;
 
-  const kpiActiveOrgs = orgs.filter((o) => o.status === "active").length;
-  const kpiActiveLots = lots.filter((l) => l.status === "active").length;
-  const kpiIssued = lots.reduce((a, b) => a + b.issued, 0);
+    if (!user || user.role !== "admin") {
+      router.push("/login");
+      return;
+    }
+
+    loadData();
+  }, [user, isLoading, router]);
+
+  const kpiOrganizations = useMemo(() => {
+    if (onboarding?.organization_count != null) return onboarding.organization_count;
+    return orgs.length;
+  }, [onboarding, orgs]);
+
+  const kpiLots = useMemo(() => {
+    if (onboarding?.lot_count != null) return onboarding.lot_count;
+    return lots.length;
+  }, [onboarding, lots]);
+
+  const kpiBadges = useMemo(() => {
+    if (onboarding?.emission_count != null) return onboarding.emission_count;
+    return credentials.length || lots.reduce((acc, lot) => acc + (lot.issued || 0), 0);
+  }, [onboarding, credentials, lots]);
+
+  const kpiIssuers = useMemo(() => {
+    if (onboarding?.issuer_count != null) return onboarding.issuer_count;
+    return 0;
+  }, [onboarding]);
 
   if (loading) {
     return (
-      <div className="empty-state">
-        <div className="spinner" />
-        <p>Carregando...</p>
-      </div>
+      <main className="container">
+        <div className="card">
+          <h1>Visão Geral</h1>
+          <p>Carregando...</p>
+        </div>
+      </main>
     );
   }
 
   return (
-    <div>
+    <main className="container">
       <div className="header-row">
         <div>
           <h1>Visão Geral</h1>
-          <p>Bem-vindo, {user?.name}!</p>
+          <p className="muted">Bem-vindo, {user?.name || "Admin"}!</p>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button className="btn-ghost" onClick={loadData}>
+            Atualizar
+          </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <section className="card" style={{ padding: 12 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
-          <div className="card" style={{ margin: 0, cursor: "pointer", padding: 14 }} onClick={() => router.push("/admin/organizations")}>
-            <h3 style={{ margin: "0 0 4px", fontSize: 24, color: "var(--primary)" }}>{kpiActiveOrgs}</h3>
-            <p style={{ margin: 0, fontSize: 12 }}>Organizações</p>
-          </div>
-          <div className="card" style={{ margin: 0, cursor: "pointer", padding: 14 }} onClick={() => router.push("/admin/lots")}>
-            <h3 style={{ margin: "0 0 4px", fontSize: 24, color: "var(--success)" }}>{onboarding?.lot_count || 0}</h3>
-            <p style={{ margin: 0, fontSize: 12 }}>Lotes</p>
-          </div>
-          <div className="card" style={{ margin: 0, cursor: "pointer", padding: 14 }} onClick={() => router.push("/admin/emissions")}>
-            <h3 style={{ margin: "0 0 4px", fontSize: 24, color: "#fbbf24" }}>{kpiIssued}</h3>
-            <p style={{ margin: 0, fontSize: 12 }}>Badges</p>
-          </div>
-          <div className="card" style={{ margin: 0, cursor: "pointer", padding: 14 }} onClick={() => router.push("/admin/users")}>
-            <h3 style={{ margin: "0 0 4px", fontSize: 24, color: "#a78bfa" }}>{onboarding?.issuer_count || 0}</h3>
-            <p style={{ margin: 0, fontSize: 12 }}>Emissores</p>
-          </div>
+      {message && (
+        <p className={message.includes("Erro") ? "error" : "success"}>{message}</p>
+      )}
+
+      <section className="card">
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 14,
+          }}
+        >
+          <button
+            type="button"
+            className="card"
+            style={{ textAlign: "left", cursor: "pointer", marginBottom: 0 }}
+            onClick={() => router.push("/admin/organizations")}
+          >
+            <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>
+              {kpiOrganizations}
+            </div>
+            <div className="muted">Organizações</div>
+          </button>
+
+          <button
+            type="button"
+            className="card"
+            style={{ textAlign: "left", cursor: "pointer", marginBottom: 0 }}
+            onClick={() => router.push("/admin/lots")}
+          >
+            <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>
+              {kpiLots}
+            </div>
+            <div className="muted">Lotes</div>
+          </button>
+
+          <button
+            type="button"
+            className="card"
+            style={{ textAlign: "left", cursor: "pointer", marginBottom: 0 }}
+            onClick={() => router.push("/admin/emissions")}
+          >
+            <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>
+              {kpiBadges}
+            </div>
+            <div className="muted">Badges / Emissões</div>
+          </button>
+
+          <button
+            type="button"
+            className="card"
+            style={{ textAlign: "left", cursor: "pointer", marginBottom: 0 }}
+            onClick={() => router.push("/admin/users")}
+          >
+            <div style={{ fontSize: 36, fontWeight: 700, lineHeight: 1 }}>
+              {kpiIssuers}
+            </div>
+            <div className="muted">Emissores</div>
+          </button>
         </div>
       </section>
 
-      {/* Quick Actions */}
       <section className="card">
         <h2>Ações Rápidas</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-          <button type="button" onClick={() => router.push("/admin/organizations")}>
-            🏢 Gerenciar Organizações
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <button className="btn-ghost" onClick={() => router.push("/admin/organizations")}>
+            Gerenciar Organizações
           </button>
-          <button type="button" onClick={() => router.push("/admin/lots")}>
-            📦 Criar Lote
+          <button className="btn-ghost" onClick={() => router.push("/admin/lots")}>
+            Criar Lote
           </button>
-          <button type="button" onClick={() => router.push("/admin/audit")}>
-            📋 Ver Auditoria
+          <button className="btn-ghost" onClick={() => router.push("/admin/audit")}>
+            Ver Auditoria
           </button>
         </div>
       </section>
 
-      {/* Recent Activity */}
       <section className="card">
         <h2>Resumo do Sistema</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 16,
+          }}
+        >
           <div>
-            <h4 style={{ margin: "0 0 8px", color: "var(--muted)" }}>Organizações</h4>
-            <p style={{ margin: 0, fontSize: 24 }}>{onboarding?.organization_count || 0} total</p>
+            <strong>Organizações</strong>
+            <div style={{ marginTop: 6 }}>{kpiOrganizations} total</div>
           </div>
+
           <div>
-            <h4 style={{ margin: "0 0 8px", color: "var(--muted)" }}>Lotes</h4>
-            <p style={{ margin: 0, fontSize: 24 }}>{onboarding?.lot_count || 0} total</p>
+            <strong>Lotes</strong>
+            <div style={{ marginTop: 6 }}>{kpiLots} total</div>
           </div>
+
           <div>
-            <h4 style={{ margin: "0 0 8px", color: "var(--muted)" }}>Emissões</h4>
-            <p style={{ margin: 0, fontSize: 24 }}>{onboarding?.emission_count || 0} total</p>
+            <strong>Emissões</strong>
+            <div style={{ marginTop: 6 }}>{kpiBadges} total</div>
+          </div>
+
+          <div>
+            <strong>Próximo passo</strong>
+            <div style={{ marginTop: 6 }}>
+              {onboarding?.next_step || "Sistema operacional"}
+            </div>
           </div>
         </div>
       </section>
-    </div>
+    </main>
   );
 }
