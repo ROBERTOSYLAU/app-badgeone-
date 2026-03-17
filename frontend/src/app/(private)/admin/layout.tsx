@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useAuth, RequireAuth } from "../../../lib/auth-context";
+import { usePathname, useRouter } from "next/navigation";
+import { RequireAuth, useAuth } from "../../../lib/auth-context";
 
 function AdminSidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     { href: "/admin", label: "Visão Geral", icon: "📊" },
@@ -16,42 +17,115 @@ function AdminSidebar() {
   ];
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-brand">
-        <span className="logo">🏅</span>
-        <h1>Badge One</h1>
-      </div>
+    <aside
+      style={{
+        width: 220,
+        minHeight: "100vh",
+        background: "#081748",
+        borderRight: "1px solid rgba(255,255,255,0.08)",
+        padding: 14,
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+        position: "sticky",
+        top: 0,
+      }}
+    >
+      <Link
+        href="/admin"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "10px 12px",
+          borderRadius: 12,
+          textDecoration: "none",
+          color: "#fff",
+          fontWeight: 800,
+          fontSize: 28,
+        }}
+      >
+        <span style={{ fontSize: 30 }}>🏅</span>
+        <span style={{ fontSize: 16, fontWeight: 700 }}>Badge One</span>
+      </Link>
 
-      <nav className="sidebar-nav">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={pathname === item.href ? "active" : ""}
-          >
-            <span>{item.icon}</span>
-            {item.label}
-          </Link>
-        ))}
+      <nav style={{ display: "grid", gap: 8 }}>
+        {navItems.map((item) => {
+          const active = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "12px 14px",
+                borderRadius: 12,
+                textDecoration: "none",
+                color: "#fff",
+                background: active ? "rgba(37, 99, 235, 0.35)" : "transparent",
+                border: `1px solid ${active ? "rgba(96,165,250,0.45)" : "rgba(255,255,255,0.08)"}`,
+                fontWeight: active ? 700 : 500,
+              }}
+            >
+              <span>{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
 
-      <div className="sidebar-footer">
-        <div className="sidebar-user">
-          <p className="name">{user?.name}</p>
-          <p className="org">{user?.organization_name || "Administrador"}</p>
+      <div
+        style={{
+          marginTop: "auto",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          paddingTop: 14,
+          display: "grid",
+          gap: 10,
+        }}
+      >
+        <div>
+          <div style={{ color: "#fff", fontWeight: 700 }}>
+            {user?.name || "Badge One Admin"}
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
+            {user?.organization_name || "Administrador"}
+          </div>
         </div>
-        <button onClick={logout}>🚪 Sair</button>
+
+        <button
+          className="btn-ghost"
+          onClick={() => {
+            logout();
+            router.push("/");
+          }}
+          style={{ width: "100%" }}
+        >
+          Sair
+        </button>
       </div>
     </aside>
   );
 }
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <RequireAuth allowedRoles={["admin"]}>
-      <div className="admin-layout">
+    <RequireAuth>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "220px 1fr",
+          minHeight: "100vh",
+          background: "#03113b",
+        }}
+      >
         <AdminSidebar />
-        <main className="main-content">{children}</main>
+        <div>{children}</div>
       </div>
     </RequireAuth>
   );
