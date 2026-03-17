@@ -77,6 +77,12 @@ function formatDateBR(value?: string) {
   return value;
 }
 
+function shortText(value?: string, max = 90) {
+  if (!value) return "";
+  if (value.length <= max) return value;
+  return `${value.slice(0, max)}...`;
+}
+
 export default function AdminLotsPage() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
@@ -270,7 +276,13 @@ export default function AdminLotsPage() {
       </div>
 
       {message && (
-        <p className={message.toLowerCase().includes("falhou") || message.toLowerCase().includes("erro") ? "error" : "success"}>
+        <p
+          className={
+            message.toLowerCase().includes("falhou") || message.toLowerCase().includes("erro")
+              ? "error"
+              : "success"
+          }
+        >
           {message}
         </p>
       )}
@@ -386,44 +398,54 @@ export default function AdminLotsPage() {
           </button>
         </div>
 
-        <ul className="list">
-          {filtered.map((l, i) => {
+        <div style={{ display: "grid", gap: 10 }}>
+          {filtered.map((l) => {
             const org = orgs.find((o) => o.id === l.organization_id);
 
             return (
-              <li key={l.id}>
-                <div style={{ display: "grid", gap: 8 }}>
-                  <div>
-                    <strong>
-                      {i + 1}. {(l.title || `Lote #${l.id}`).toUpperCase()}
-                    </strong>
+              <section
+                key={l.id}
+                className="card"
+                style={{ marginBottom: 0, background: "rgba(255,255,255,0.02)" }}
+              >
+                <div style={{ display: "grid", gap: 10 }}>
+                  <Link
+                    href={`/admin/lots/${l.id}`}
+                    style={{
+                      textDecoration: "none",
+                      color: "#fff",
+                      display: "grid",
+                      gap: 6,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                      <strong style={{ fontSize: 18 }}>
+                        {(l.title || `Lote #${l.id}`).toUpperCase()}
+                      </strong>
 
-                    <span
-                      style={{
-                        marginLeft: 8,
-                        padding: "2px 8px",
-                        borderRadius: 4,
-                        fontSize: 12,
-                        background: statusColor(l.status) + "20",
-                        color: statusColor(l.status),
-                        border: `1px solid ${statusColor(l.status)}`,
-                      }}
-                    >
-                      {statusLabel(l.status)}
-                    </span>
-                  </div>
+                      <span
+                        style={{
+                          padding: "3px 10px",
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          background: statusColor(l.status) + "20",
+                          color: statusColor(l.status),
+                          border: `1px solid ${statusColor(l.status)}`,
+                        }}
+                      >
+                        {statusLabel(l.status)}
+                      </span>
+                    </div>
 
-                  <div className="muted">
-                    Empresa: {org?.name || `#${l.organization_id}`} | Total: {l.total_badges} | Emitidos: {l.issued} | Saldo: {l.remaining} | Janela: {l.issue_window_days || 0} dias | Criado: {formatDateBR(l.created_at)}
-                  </div>
+                    <div className="muted">
+                      Empresa: {org?.name || `#${l.organization_id}`} | Total: {l.total_badges} | Emitidos: {l.issued} | Saldo: {l.remaining} | Janela: {l.issue_window_days || 0} dias | Criado: {formatDateBR(l.created_at)}
+                    </div>
 
-                  {l.description ? <div className="muted">{l.description}</div> : null}
+                    {l.description ? <div className="muted">{shortText(l.description, 120)}</div> : null}
+                  </Link>
 
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <Link className="btn-ghost" href={`/admin/lots/${l.id}`}>
-                      Ver detalhes
-                    </Link>
-
                     {l.status === "active" && (
                       <button className="btn-ghost" onClick={() => pauseLot(l.id)}>
                         Pausar
@@ -464,12 +486,12 @@ export default function AdminLotsPage() {
                     </div>
                   )}
                 </div>
-              </li>
+              </section>
             );
           })}
 
-          {!filtered.length && <li>Nenhum lote encontrado.</li>}
-        </ul>
+          {!filtered.length && <section className="card" style={{ marginBottom: 0 }}>Nenhum lote encontrado.</section>}
+        </div>
       </section>
     </main>
   );
