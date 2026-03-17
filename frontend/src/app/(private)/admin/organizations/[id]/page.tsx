@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../../../lib/api";
 import { useAuth } from "../../../../../lib/auth-context";
@@ -28,6 +28,7 @@ type Lot = {
   remaining: number;
   issue_window_days?: number;
   status: string;
+  created_at?: string;
 };
 
 type Note = {
@@ -61,6 +62,7 @@ type CnpjLookup = {
   uf?: string;
   cep?: string;
   natureza_juridica?: string;
+  cnae_fiscal?: string;
   cnae_fiscal_descricao?: string;
 };
 
@@ -141,6 +143,12 @@ function joinAddress(data: CnpjLookup) {
   return parts.join(", ");
 }
 
+function shortText(value?: string, max = 80) {
+  if (!value) return "";
+  if (value.length <= max) return value;
+  return `${value.slice(0, max)}...`;
+}
+
 export default function OrganizationDetailsPage({
   params,
 }: {
@@ -148,6 +156,7 @@ export default function OrganizationDetailsPage({
 }) {
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
+  const lotFormRef = useRef<HTMLDivElement | null>(null);
 
   const [org, setOrg] = useState<Org | null>(null);
   const [lots, setLots] = useState<Lot[]>([]);
@@ -271,8 +280,12 @@ export default function OrganizationDetailsPage({
       const fullAddress = joinAddress(data);
       if (fullAddress) setEditAddress(fullAddress);
 
-      if (data.cnae_fiscal_descricao) setEditCnae(data.cnae_fiscal_descricao);
-      if (data.data_inicio_atividade) setEditOpeningDate(data.data_inicio_atividade);
+      const cnaeCompleto = [data.cnae_fiscal, data.cnae_fiscal_descricao]
+        .filter(Boolean)
+        .join(" - ");
+      if (cnaeCompleto) setEditCnae(cnaeCompleto);
+
+      if (data.data_inicio_atividade) setEditOpeningDate(formatDateBR(data.data_inicio_atividade));
       if (data.natureza_juridica) setEditRegime(data.natureza_juridica);
 
       setMessage("Dados do CNPJ carregados com sucesso.");
@@ -420,7 +433,7 @@ export default function OrganizationDetailsPage({
 
   async function revokeLotFlow(l: Lot) {
     const full = window.confirm(
-      `Deseja revogar totalmente o lote ${l.title || "#" + l.id}?\n\nClique em OK para revogação total.\nClique em Cancelar para revogação parcial.`
+      `Deseja revogar totalmente o lote ${l.title || "#" + l.id}?\n\nOK = total\nCancelar = parcial`
     );
 
     if (full) {
@@ -503,6 +516,14 @@ export default function OrganizationDetailsPage({
     setShowCreateLot(false);
   }
 
+  function openCreateLotForm() {
+    setShowCreateLot(true);
+    setIsEditing(false);
+    setTimeout(() => {
+      lotFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  }
+
   async function saveEdit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -571,31 +592,18 @@ export default function OrganizationDetailsPage({
     }
   }
 
-  const totalIssued = useMemo(
-    () => lots.reduce((a, b) => a + (b.issued || 0), 0),
-    [lots]
-  );
-
-  const totalRemaining = useMemo(
-    () => lots.reduce((a, b) => a + (b.remaining || 0), 0),
-    [lots]
-  );
+  const totalIssued = useMemo(() => lots.reduce((a, b) => a + (b.issued || 0), 0), [lots]);
+  const totalRemaining = useMemo(() => lots.reduce((a, b) => a + (b.remaining || 0), 0), [lots]);
 
   return (
     <main className="container">
       <div className="header-row">
         <h1>Organização</h1>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            className="btn-ghost"
-            onClick={() => router.push("/admin/organizations")}
-          >
+          <button className="btn-ghost" onClick={() => router.push("/admin/organizations")}>
             ← Voltar
           </button>
-          <button
-            className="btn-ghost"
-            onClick={() => loadAll()}
-          >
+          <button className="btn-ghost" onClick={() => loadAll()}>
             Atualizar
           </button>
           <button
@@ -625,11 +633,7 @@ export default function OrganizationDetailsPage({
             <div style={{ display: "grid", gap: 12 }}>
               <div>
                 <label>Razão Social</label>
-                <input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  required
-                />
+                <input value={editName} onChange={(e) => setEditName(e.target.value)} required />
               </div>
 
               <div>
@@ -640,12 +644,7 @@ export default function OrganizationDetailsPage({
                     onChange={(e) => setEditDocument(e.target.value)}
                     placeholder="Somente números ou CNPJ formatado"
                   />
-                  <button
-                    type="button"
-                    className="btn-ghost"
-                    onClick={lookupCnpjAndFill}
-                    disabled={isBusy}
-                  >
+                  <button type="button" className="btn-ghost" onClick={lookupCnpjAndFill} disabled={isBusy}>
                     Buscar CNPJ
                   </button>
                 </div>
@@ -653,10 +652,7 @@ export default function OrganizationDetailsPage({
 
               <div>
                 <label>Endereço</label>
-                <input
-                  value={editAddress}
-                  onChange={(e) => setEditAddress(e.target.value)}
-                />
+                <input value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
               </div>
 
               <div
@@ -671,7 +667,7 @@ export default function OrganizationDetailsPage({
                   <input
                     value={editCnae}
                     onChange={(e) => setEditCnae(e.target.value)}
-                    placeholder="Descrição do CNAE"
+                    placeholder="Ex.: 8299-7/99 - descrição"
                   />
                 </div>
 
@@ -687,10 +683,7 @@ export default function OrganizationDetailsPage({
 
               <div>
                 <label>Natureza Jurídica</label>
-                <input
-                  value={editRegime}
-                  onChange={(e) => setEditRegime(e.target.value)}
-                />
+                <input value={editRegime} onChange={(e) => setEditRegime(e.target.value)} />
               </div>
             </div>
 
@@ -698,19 +691,10 @@ export default function OrganizationDetailsPage({
               <button type="submit" disabled={isBusy}>
                 Salvar Alterações
               </button>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={runOrganizationMigration}
-                disabled={isBusy}
-              >
+              <button type="button" className="btn-ghost" onClick={runOrganizationMigration} disabled={isBusy}>
                 Rodar migração
               </button>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => setIsEditing(false)}
-              >
+              <button type="button" className="btn-ghost" onClick={() => setIsEditing(false)}>
                 Cancelar
               </button>
             </div>
@@ -719,7 +703,7 @@ export default function OrganizationDetailsPage({
       )}
 
       {showCreateLot && org && (
-        <section className="card" style={{ marginBottom: 20 }}>
+        <section className="card" style={{ marginBottom: 20 }} ref={lotFormRef}>
           <h2>Criar Lote</h2>
           <form onSubmit={createLot}>
             <div style={{ display: "grid", gap: 12 }}>
@@ -783,11 +767,7 @@ export default function OrganizationDetailsPage({
               <button type="submit" disabled={isBusy}>
                 Criar Lote
               </button>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => setShowCreateLot(false)}
-              >
+              <button type="button" className="btn-ghost" onClick={() => setShowCreateLot(false)}>
                 Cancelar
               </button>
             </div>
@@ -850,47 +830,38 @@ export default function OrganizationDetailsPage({
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="btn-ghost" onClick={startEditing}>
-                ✏️ Editar
+                Editar
               </button>
 
               {org.status !== "trashed" && (
-                <button
-                  className="btn-ghost"
-                  onClick={() => {
-                    setShowCreateLot(true);
-                    setIsEditing(false);
-                  }}
-                >
-                  📦 Criar Lote
+                <button className="btn-ghost" onClick={openCreateLotForm}>
+                  Criar lote
                 </button>
               )}
 
               {org.status === "active" ? (
                 <button className="btn-ghost" onClick={deactivateOrganization}>
-                  ⏸️ Pausar
+                  Pausar
                 </button>
               ) : org.status === "trashed" ? (
                 <button className="btn-ghost" onClick={restoreOrganization}>
-                  🔄 Restaurar
+                  Restaurar
                 </button>
               ) : (
                 <button className="btn-ghost" onClick={activateOrganization}>
-                  ▶️ Ativar
+                  Ativar
                 </button>
               )}
 
               {org.status !== "trashed" && (
                 <button className="btn-ghost" onClick={deleteOrganization}>
-                  🗑️ Lixeira
+                  Lixeira
                 </button>
               )}
 
               {org.status === "trashed" && (
-                <button
-                  className="btn-ghost"
-                  onClick={permanentDeleteOrganization}
-                >
-                  ❌ Excluir permanentemente
+                <button className="btn-ghost" onClick={permanentDeleteOrganization}>
+                  Excluir permanentemente
                 </button>
               )}
             </div>
@@ -898,38 +869,19 @@ export default function OrganizationDetailsPage({
 
           <section className="card">
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-              <button
-                className={tab === "overview" ? "btn-active" : "btn-ghost"}
-                onClick={() => setTab("overview")}
-              >
+              <button className={tab === "overview" ? "btn-active" : "btn-ghost"} onClick={() => setTab("overview")}>
                 Visão geral
               </button>
-
-              <button
-                className={tab === "active" ? "btn-active" : "btn-ghost"}
-                onClick={() => setTab("active")}
-              >
+              <button className={tab === "active" ? "btn-active" : "btn-ghost"} onClick={() => setTab("active")}>
                 Lotes ativos
               </button>
-
-              <button
-                className={tab === "revoked" ? "btn-active" : "btn-ghost"}
-                onClick={() => setTab("revoked")}
-              >
+              <button className={tab === "revoked" ? "btn-active" : "btn-ghost"} onClick={() => setTab("revoked")}>
                 Lotes revogados/finalizados
               </button>
-
-              <button
-                className={tab === "notes" ? "btn-active" : "btn-ghost"}
-                onClick={() => setTab("notes")}
-              >
+              <button className={tab === "notes" ? "btn-active" : "btn-ghost"} onClick={() => setTab("notes")}>
                 Anotações
               </button>
-
-              <button
-                className={tab === "trash" ? "btn-active" : "btn-ghost"}
-                onClick={() => setTab("trash")}
-              >
+              <button className={tab === "trash" ? "btn-active" : "btn-ghost"} onClick={() => setTab("trash")}>
                 Lixeira
               </button>
             </div>
@@ -937,114 +889,84 @@ export default function OrganizationDetailsPage({
             {tab === "overview" && (
               <div className="form-grid">
                 <div>
-                  <p>
-                    <strong>Total de lotes:</strong> {lots.length}
-                  </p>
-                  <p>
-                    <strong>Total emitido:</strong> {totalIssued}
-                  </p>
-                  <p>
-                    <strong>Saldo total:</strong> {totalRemaining}
-                  </p>
+                  <p><strong>Total de lotes:</strong> {lots.length}</p>
+                  <p><strong>Total emitido:</strong> {totalIssued}</p>
+                  <p><strong>Saldo total:</strong> {totalRemaining}</p>
                 </div>
 
                 <div className="card" style={{ marginBottom: 0 }}>
                   <h2 style={{ fontSize: 16 }}>Lotes da organização ({lots.length})</h2>
-                  <ul className="list">
-                    {lots.map((l, i) => (
-                      <li key={l.id}>
-                        {i + 1}.{" "}
-                        <Link
-                          className="lot-title-highlight"
-                          href={`/admin/lots/${l.id}`}
-                        >
-                          {l.title || `Lote #${l.id}`}
-                        </Link>
-
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            padding: "2px 8px",
-                            borderRadius: 4,
-                            fontSize: 12,
-                            background: getStatusColor(l.status) + "20",
-                            color: getStatusColor(l.status),
-                            border: `1px solid ${getStatusColor(l.status)}`,
-                          }}
-                        >
-                          {getStatusLabel(l.status)}
-                        </span>
-
-                        <span className="muted">
-                          {" "}
-                          | Total {l.total_badges} | Emitidos {l.issued} | Saldo{" "}
-                          {l.remaining} | Janela {l.issue_window_days || 0} dias
-                        </span>
-
-                        {l.description ? <p className="muted">{l.description}</p> : null}
-                      </li>
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {lots.map((l) => (
+                      <Link
+                        key={l.id}
+                        href={`/admin/lots/${l.id}`}
+                        className="card"
+                        style={{
+                          marginBottom: 0,
+                          textDecoration: "none",
+                          color: "#fff",
+                          background: "rgba(255,255,255,0.02)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                        }}
+                      >
+                        <div style={{ display: "grid", gap: 6 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                            <strong>{l.title || `Lote #${l.id}`}</strong>
+                            <span
+                              style={{
+                                padding: "2px 8px",
+                                borderRadius: 999,
+                                fontSize: 12,
+                                background: getStatusColor(l.status) + "20",
+                                color: getStatusColor(l.status),
+                                border: `1px solid ${getStatusColor(l.status)}`,
+                              }}
+                            >
+                              {getStatusLabel(l.status)}
+                            </span>
+                          </div>
+                          <div className="muted">
+                            Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Janela {l.issue_window_days || 0} dias
+                          </div>
+                          {l.description ? <div className="muted">{shortText(l.description, 110)}</div> : null}
+                        </div>
+                      </Link>
                     ))}
-                    {!lots.length && <li>Nenhum lote cadastrado.</li>}
-                  </ul>
+                    {!lots.length && <div>Nenhum lote cadastrado.</div>}
+                  </div>
                 </div>
               </div>
             )}
 
             {tab === "active" && (
               <div className="form-grid">
-                <ul className="list">
+                <div style={{ display: "grid", gap: 10 }}>
                   {activeLots.map((l) => (
-                    <li key={l.id}>
-                      <div style={{ display: "grid", gap: 6 }}>
-                        <span>
-                          <Link
-                            className="lot-title-highlight"
-                            href={`/admin/lots/${l.id}`}
-                          >
-                            {(l.title || `Lote #${l.id}`).toUpperCase()}
-                          </Link>
+                    <section
+                      key={l.id}
+                      className="card"
+                      style={{ marginBottom: 0, background: "rgba(255,255,255,0.02)" }}
+                    >
+                      <div style={{ display: "grid", gap: 8 }}>
+                        <Link
+                          href={`/admin/lots/${l.id}`}
+                          style={{ textDecoration: "none", color: "#fff", fontWeight: 800 }}
+                        >
+                          {(l.title || `Lote #${l.id}`).toUpperCase()}
+                        </Link>
 
-                          <span
-                            style={{
-                              marginLeft: 8,
-                              padding: "2px 8px",
-                              borderRadius: 4,
-                              fontSize: 12,
-                              background: getStatusColor(l.status) + "20",
-                              color: getStatusColor(l.status),
-                              border: `1px solid ${getStatusColor(l.status)}`,
-                            }}
-                          >
-                            {getStatusLabel(l.status)}
-                          </span>
-
-                          <span className="muted">
-                            {" "}
-                            | Total {l.total_badges} | Emitidos {l.issued} | Saldo{" "}
-                            {l.remaining} | Janela {l.issue_window_days || 0} dias
-                          </span>
-                        </span>
+                        <div className="muted">
+                          Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Janela {l.issue_window_days || 0} dias
+                        </div>
 
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <button
-                            className="btn-ghost"
-                            onClick={() => router.push(`/admin/lots/${l.id}`)}
-                          >
-                            Ver detalhes
-                          </button>
-
                           {l.status === "active" ? (
-                            <button
-                              className="btn-ghost"
-                              onClick={() => updateLot(l.id, { status: "paused" })}
-                            >
+                            <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "paused" })}>
                               Pausar lote
                             </button>
                           ) : (
-                            <button
-                              className="btn-ghost"
-                              onClick={() => updateLot(l.id, { status: "active" })}
-                            >
+                            <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "active" })}>
                               Ativar lote
                             </button>
                           )}
@@ -1053,18 +975,15 @@ export default function OrganizationDetailsPage({
                             Revogar lote
                           </button>
 
-                          <button
-                            className="btn-ghost"
-                            onClick={() => moveLotToTrash(l)}
-                          >
+                          <button className="btn-ghost" onClick={() => moveLotToTrash(l)}>
                             Lixeira
                           </button>
                         </div>
                       </div>
-                    </li>
+                    </section>
                   ))}
-                  {!activeLots.length && <li>Nenhum lote ativo/pausado.</li>}
-                </ul>
+                  {!activeLots.length && <div>Nenhum lote ativo/pausado.</div>}
+                </div>
 
                 <div className="card" style={{ marginBottom: 0 }}>
                   <h2 style={{ fontSize: 16 }}>Credenciais emitidas desta organização</h2>
@@ -1072,39 +991,17 @@ export default function OrganizationDetailsPage({
                     {credentials.map((c) => (
                       <li key={c.id}>
                         {c.recipient_name} | {c.course_name} | status: {c.status}
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            flexWrap: "wrap",
-                            marginTop: 6,
-                          }}
-                        >
-                          <button
-                            className="btn-ghost"
-                            onClick={() => updateCredential(c.id, "paused")}
-                          >
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+                          <button className="btn-ghost" onClick={() => updateCredential(c.id, "paused")}>
                             Pausar
                           </button>
-
-                          <button
-                            className="btn-ghost"
-                            onClick={() => revokeCredential(c.id)}
-                          >
+                          <button className="btn-ghost" onClick={() => revokeCredential(c.id)}>
                             Revogar
                           </button>
-
-                          <button
-                            className="btn-ghost"
-                            onClick={() => updateCredential(c.id, "valid")}
-                          >
+                          <button className="btn-ghost" onClick={() => updateCredential(c.id, "valid")}>
                             Ativar
                           </button>
-
-                          <button
-                            className="btn-ghost"
-                            onClick={() => trashCredential(c.id)}
-                          >
+                          <button className="btn-ghost" onClick={() => trashCredential(c.id)}>
                             Lixeira
                           </button>
                         </div>
@@ -1117,61 +1014,31 @@ export default function OrganizationDetailsPage({
             )}
 
             {tab === "revoked" && (
-              <ul className="list">
+              <div style={{ display: "grid", gap: 10 }}>
                 {revokedLots.map((l) => (
-                  <li key={l.id}>
-                    <Link
-                      className="lot-title-highlight"
-                      href={`/admin/lots/${l.id}`}
-                    >
-                      {l.title || `Lote #${l.id}`}
-                    </Link>
-
-                    <span
-                      style={{
-                        marginLeft: 8,
-                        padding: "2px 8px",
-                        borderRadius: 4,
-                        fontSize: 12,
-                        background: getStatusColor(l.status) + "20",
-                        color: getStatusColor(l.status),
-                        border: `1px solid ${getStatusColor(l.status)}`,
-                      }}
-                    >
-                      {getStatusLabel(l.status)}
-                    </span>
-
-                    <span className="muted">
-                      {" "}
-                      | Emitidos {l.issued} | Total {l.total_badges}
-                    </span>
-
-                    <div
-                      style={{
-                        marginTop: 6,
-                        display: "flex",
-                        gap: 8,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <button
-                        className="btn-ghost"
-                        onClick={() => router.push(`/admin/lots/${l.id}`)}
+                  <section key={l.id} className="card" style={{ marginBottom: 0 }}>
+                    <div style={{ display: "grid", gap: 8 }}>
+                      <Link
+                        href={`/admin/lots/${l.id}`}
+                        style={{ textDecoration: "none", color: "#fff", fontWeight: 800 }}
                       >
-                        Ver detalhes
-                      </button>
+                        {l.title || `Lote #${l.id}`}
+                      </Link>
 
-                      <button
-                        className="btn-ghost"
-                        onClick={() => recoverLotFlow(l)}
-                      >
-                        Recuperar lote
-                      </button>
+                      <div className="muted">
+                        Emitidos {l.issued} | Total {l.total_badges}
+                      </div>
+
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button className="btn-ghost" onClick={() => recoverLotFlow(l)}>
+                          Recuperar lote
+                        </button>
+                      </div>
                     </div>
-                  </li>
+                  </section>
                 ))}
-                {!revokedLots.length && <li>Nenhum lote revogado/finalizado.</li>}
-              </ul>
+                {!revokedLots.length && <div>Nenhum lote revogado/finalizado.</div>}
+              </div>
             )}
 
             {tab === "notes" && (
@@ -1203,17 +1070,10 @@ export default function OrganizationDetailsPage({
                 <ul className="list">
                   {notesList.map((n, i) => (
                     <li key={n.id}>
-                      <strong>
-                        {i + 1}. {n.title}
-                      </strong>{" "}
-                      <span className="muted">
-                        ({n.created_at?.slice(0, 10) || "-"})
-                      </span>
+                      <strong>{i + 1}. {n.title}</strong>{" "}
+                      <span className="muted">({n.created_at?.slice(0, 10) || "-"})</span>
                       <p>{n.content}</p>
-                      <button
-                        className="btn-ghost"
-                        onClick={() => removeNote(n.id)}
-                      >
+                      <button className="btn-ghost" onClick={() => removeNote(n.id)}>
                         Excluir anotação
                       </button>
                     </li>
@@ -1230,37 +1090,10 @@ export default function OrganizationDetailsPage({
                   <ul className="list">
                     {trashedLots.map((l) => (
                       <li key={l.id}>
-                        <Link
-                          className="lot-title-highlight"
-                          href={`/admin/lots/${l.id}`}
-                        >
-                          {l.title || `Lote #${l.id}`}
-                        </Link>
-
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            padding: "2px 8px",
-                            borderRadius: 4,
-                            fontSize: 12,
-                            background: getStatusColor(l.status) + "20",
-                            color: getStatusColor(l.status),
-                            border: `1px solid ${getStatusColor(l.status)}`,
-                          }}
-                        >
-                          {getStatusLabel(l.status)}
-                        </span>
-
-                        <span className="muted">
-                          {" "}
-                          | Total {l.total_badges} | Emitidos {l.issued}
-                        </span>
-
+                        <div style={{ fontWeight: 700 }}>{l.title || `Lote #${l.id}`}</div>
+                        <div className="muted">Total {l.total_badges} | Emitidos {l.issued}</div>
                         <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <button
-                            className="btn-ghost"
-                            onClick={() => recoverLotFlow(l)}
-                          >
+                          <button className="btn-ghost" onClick={() => recoverLotFlow(l)}>
                             Restaurar lote
                           </button>
                         </div>
@@ -1277,10 +1110,7 @@ export default function OrganizationDetailsPage({
                       <li key={c.id}>
                         {c.recipient_name} | {c.course_name}
                         <div style={{ marginTop: 6 }}>
-                          <button
-                            className="btn-ghost"
-                            onClick={() => updateCredential(c.id, "valid")}
-                          >
+                          <button className="btn-ghost" onClick={() => updateCredential(c.id, "valid")}>
                             Restaurar credencial
                           </button>
                         </div>
