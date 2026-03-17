@@ -6,7 +6,16 @@ import { useRouter } from "next/navigation";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../../../lib/api";
 import { useAuth } from "../../../../../lib/auth-context";
 
-type Org = { id: number; name: string; document?: string; status: string };
+type Org = {
+  id: number;
+  name: string;
+  document?: string;
+  status: string;
+  address?: string;
+  cnae?: string;
+  opening_date?: string;
+  regime?: string;
+};
 type Lot = { id: number; organization_id: number; title?: string; description?: string; total_badges: number; issued: number; remaining: number; issue_window_days: number; status: string };
 
 function getStatusColor(status: string) {
