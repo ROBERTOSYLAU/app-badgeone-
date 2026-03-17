@@ -4,6 +4,7 @@ from urllib import request, error
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.core.auth import require_admin, require_issuer_or_admin
 from app.models.user import User
@@ -46,7 +47,11 @@ def _lookup_cnpj_data(cnpj: str):
 
 
 @router.post("")
-def create_org(payload: OrganizationCreate, db: Session = Depends(get_db), _=Depends(require_admin)):
+def create_org(
+    payload: OrganizationCreate,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
     try:
         doc = (payload.document or "").strip() or None
         name = (payload.name or "").strip() or None
@@ -65,39 +70,65 @@ def create_org(payload: OrganizationCreate, db: Session = Depends(get_db), _=Dep
             address=payload.address,
             cnae=payload.cnae,
             opening_date=payload.opening_date,
-            regime=payload.regime
+            regime=payload.regime,
         )
+
         db.add(org)
         db.commit()
         db.refresh(org)
-        return {"id": org.id, "name": org.name, "document": org.document, "status": org.status,
-                "address": org.address, "cnae": org.cnae, "opening_date": org.opening_date,
-                "regime": org.regime}
+
+        return {
+            "id": org.id,
+            "name": org.name,
+            "document": org.document,
+            "status": org.status,
+            "address": org.address,
+            "cnae": org.cnae,
+            "opening_date": org.opening_date,
+            "regime": org.regime,
+        }
+
     except HTTPException:
         raise
     except Exception as e:
-        import traceback
-        print(f"ERRO ao criar organização: {e}")
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Erro interno ao criar organização: {str(e)}")
 
 
 @router.get("")
-def list_orgs(db: Session = Depends(get_db), user: User = Depends(require_issuer_or_admin)):
+def list_orgs(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_issuer_or_admin),
+):
     q = db.query(Organization)
+
     if user.role == "issuer":
         if user.organization_id is None:
             return []
         q = q.filter(Organization.id == user.organization_id)
+
     data = q.order_by(Organization.id.desc()).all()
-    return [{"id": x.id, "name": x.name, "document": x.document, "status": x.status,
-             "address": x.address, "cnae": x.cnae, "opening_date": x.opening_date,
-             "regime": x.regime, "created_at": x.created_at.isoformat() if x.created_at else None} for x in data]
+
+    return [
+        {
+            "id": x.id,
+            "name": x.name,
+            "document": x.document,
+            "status": x.status,
+            "address": x.address,
+            "cnae": x.cnae,
+            "opening_date": x.opening_date,
+            "regime": x.regime,
+            "created_at": x.created_at.isoformat() if x.created_at else None,
+        }
+        for x in data
+    ]
 
 
 @router.get("/cnpj/{cnpj}")
 def lookup_cnpj(cnpj: str, _=Depends(require_admin)):
     payload = _lookup_cnpj_data(cnpj)
+
     return {
         "cnpj": payload.get("cnpj"),
         "razao_social": payload.get("razao_social"),
@@ -112,6 +143,7 @@ def lookup_cnpj(cnpj: str, _=Depends(require_admin)):
         "complemento": payload.get("complemento"),
         "cep": payload.get("cep"),
         "natureza_juridica": payload.get("natureza_juridica"),
+        "cnae_fiscal": payload.get("cnae_fiscal"),
         "cnae_fiscal_descricao": payload.get("cnae_fiscal_descricao"),
         "cnaes_secundarios": payload.get("cnaes_secundarios") or [],
         "suggested_name": payload.get("razao_social") or payload.get("nome_fantasia"),
@@ -119,7 +151,11 @@ def lookup_cnpj(cnpj: str, _=Depends(require_admin)):
 
 
 @router.post("/{org_id}/deactivate")
-def deactivate_org(org_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+def deactivate_org(
+    org_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organização não encontrada")
@@ -127,11 +163,16 @@ def deactivate_org(org_id: int, db: Session = Depends(get_db), _=Depends(require
     org.status = "inactive"
     db.commit()
     db.refresh(org)
+
     return {"ok": True, "mode": "deactivated", "id": org.id, "status": org.status}
 
 
 @router.post("/{org_id}/activate")
-def activate_org(org_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+def activate_org(
+    org_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organização não encontrada")
@@ -139,11 +180,17 @@ def activate_org(org_id: int, db: Session = Depends(get_db), _=Depends(require_a
     org.status = "active"
     db.commit()
     db.refresh(org)
+
     return {"ok": True, "mode": "activated", "id": org.id, "status": org.status}
 
 
 @router.delete("/{org_id}")
-def delete_org(org_id: int, force: bool = Query(False), db: Session = Depends(get_db), _=Depends(require_admin)):
+def delete_org(
+    org_id: int,
+    force: bool = Query(False),
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organização não encontrada")
@@ -154,15 +201,39 @@ def delete_org(org_id: int, force: bool = Query(False), db: Session = Depends(ge
         db.refresh(org)
         return {"ok": True, "mode": "trashed", "id": org.id, "status": org.status}
 
-    db.query(Credential).filter(Credential.organization_id == org_id).delete(synchronize_session=False)
-    db.query(BadgeLot).filter(BadgeLot.organization_id == org_id).delete(synchronize_session=False)
-    db.delete(org)
-    db.commit()
-    return {"ok": True, "mode": "deleted", "id": org_id}
+    try:
+        user_table = getattr(User, "__tablename__", "users")
+        db.execute(
+            text(f"UPDATE {user_table} SET organization_id = NULL WHERE organization_id = :org_id"),
+            {"org_id": org_id},
+        )
+
+        db.query(Credential).filter(Credential.organization_id == org_id).delete(
+            synchronize_session=False
+        )
+        db.query(BadgeLot).filter(BadgeLot.organization_id == org_id).delete(
+            synchronize_session=False
+        )
+
+        db.delete(org)
+        db.commit()
+
+        return {"ok": True, "mode": "deleted", "id": org_id}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao excluir permanentemente organização: {str(e)}",
+        )
 
 
 @router.post("/{org_id}/restore")
-def restore_org(org_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+def restore_org(
+    org_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organização não encontrada")
@@ -170,15 +241,21 @@ def restore_org(org_id: int, db: Session = Depends(get_db), _=Depends(require_ad
     org.status = "active"
     db.commit()
     db.refresh(org)
+
     return {"ok": True, "mode": "restored", "id": org.id, "status": org.status}
 
 
 @router.patch("/{org_id}")
-def update_org(org_id: int, data: dict, db: Session = Depends(get_db), _=Depends(require_admin)):
+def update_org(
+    org_id: int,
+    data: dict,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organização não encontrada")
-    
+
     if "name" in data:
         org.name = data["name"]
     if "document" in data:
@@ -191,54 +268,71 @@ def update_org(org_id: int, data: dict, db: Session = Depends(get_db), _=Depends
         org.opening_date = data["opening_date"]
     if "regime" in data:
         org.regime = data["regime"]
-    
+
     db.commit()
     db.refresh(org)
-    return {"ok": True, "id": org.id, "name": org.name, "document": org.document,
-            "address": org.address, "cnae": org.cnae, "opening_date": org.opening_date,
-            "regime": org.regime}
+
+    return {
+      "ok": True,
+      "id": org.id,
+      "name": org.name,
+      "document": org.document,
+      "address": org.address,
+      "cnae": org.cnae,
+      "opening_date": org.opening_date,
+      "regime": org.regime,
+    }
 
 
 @router.post("/migrate/add-fields")
-def migrate_add_fields(db: Session = Depends(get_db), _=Depends(require_admin)):
-    """Temporary endpoint to add missing columns to organizations table"""
+def migrate_add_fields(
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
     from sqlalchemy import text
-    
+
     try:
-        # Check if columns exist
-        result = db.execute(text("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'organizations'
-        """))
+        result = db.execute(
+            text(
+                """
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'organizations'
+                """
+            )
+        )
         existing_columns = {row[0] for row in result}
-        
+
         added = []
-        
-        # Add missing columns
+
         columns_to_add = {
-            'address': 'TEXT',
-            'cnae': 'VARCHAR(255)',
-            'opening_date': 'VARCHAR(20)',
-            'regime': 'VARCHAR(100)'
+            "address": "TEXT",
+            "cnae": "VARCHAR(255)",
+            "opening_date": "VARCHAR(20)",
+            "regime": "VARCHAR(100)",
         }
-        
+
         for col_name, col_type in columns_to_add.items():
             if col_name not in existing_columns:
-                db.execute(text(f"""
-                    ALTER TABLE organizations 
-                    ADD COLUMN {col_name} {col_type}
-                """))
+                db.execute(
+                    text(
+                        f"""
+                        ALTER TABLE organizations
+                        ADD COLUMN {col_name} {col_type}
+                        """
+                    )
+                )
                 added.append(col_name)
-        
+
         db.commit()
-        
+
         return {
-            "ok": True, 
-            "message": "Migration completed",
+            "ok": True,
+            "message": "Migração concluída",
             "existing_columns": list(existing_columns),
-            "added_columns": added
+            "added_columns": added,
         }
+
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
