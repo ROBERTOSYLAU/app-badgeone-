@@ -25,6 +25,76 @@ class OrganizationCreate(BaseModel):
     regime: str | None = None
 
 
+def _clean_text(value):
+    return (value or "").strip()
+
+
+def _build_logradouro(payload: dict) -> str:
+    raw = _clean_text(payload.get("logradouro"))
+    if not raw:
+        return ""
+
+    prefix_candidates = [
+        payload.get("descricao_tipo_de_logradouro"),
+        payload.get("descricao_tipo_logradouro"),
+        payload.get("tipo_logradouro"),
+        payload.get("logradouro_tipo"),
+    ]
+
+    prefix = ""
+    for item in prefix_candidates:
+        text_value = _clean_text(item)
+        if text_value:
+            prefix = text_value
+            break
+
+    upper_raw = raw.upper()
+    known_prefixes = (
+        "R ", "RUA ",
+        "AV ", "AV. ", "AVENIDA ",
+        "AL ", "AL. ", "ALAMEDA ",
+        "TR ", "TRAVESSA ",
+        "TV ", "TV. ",
+        "ROD ", "ROD. ", "RODOVIA ",
+        "EST ", "EST. ", "ESTRADA ",
+        "PC ", "PC. ", "PRAÇA ", "PRACA ",
+        "VL ", "VILA ",
+        "LOT ", "LOTEAMENTO ",
+    )
+
+    if upper_raw.startswith(known_prefixes):
+        return raw
+
+    if prefix:
+        prefix_upper = prefix.upper().strip().rstrip(".")
+        prefix_map = {
+            "RUA": "R",
+            "R": "R",
+            "AVENIDA": "AV",
+            "AV": "AV",
+            "ALAMEDA": "AL",
+            "AL": "AL",
+            "TRAVESSA": "TR",
+            "TR": "TR",
+            "TV": "TV",
+            "RODOVIA": "ROD",
+            "ROD": "ROD",
+            "ESTRADA": "EST",
+            "EST": "EST",
+            "PRAÇA": "PC",
+            "PRACA": "PC",
+            "PC": "PC",
+            "VILA": "VL",
+            "VL": "VL",
+            "LOTEAMENTO": "LOT",
+            "LOT": "LOT",
+        }
+        short_prefix = prefix_map.get(prefix_upper, prefix_upper)
+        return f"{short_prefix} {raw}".strip()
+
+    return raw
+
+
 def _lookup_cnpj_data(cnpj: str):
     only_digits = "".join(ch for ch in cnpj if ch.isdigit())
     if len(only_digits) != 14:
@@ -128,6 +198,7 @@ def list_orgs(
 @router.get("/cnpj/{cnpj}")
 def lookup_cnpj(cnpj: str, _=Depends(require_admin)):
     payload = _lookup_cnpj_data(cnpj)
+    logradouro_completo = _build_logradouro(payload)
 
     return {
         "cnpj": payload.get("cnpj"),
@@ -137,7 +208,12 @@ def lookup_cnpj(cnpj: str, _=Depends(require_admin)):
         "data_inicio_atividade": payload.get("data_inicio_atividade"),
         "municipio": payload.get("municipio"),
         "uf": payload.get("uf"),
-        "logradouro": payload.get("logradouro"),
+        "logradouro": logradouro_completo,
+        "logradouro_sem_prefixo": payload.get("logradouro"),
+        "descricao_tipo_de_logradouro": payload.get("descricao_tipo_de_logradouro"),
+        "descricao_tipo_logradouro": payload.get("descricao_tipo_logradouro"),
+        "tipo_logradouro": payload.get("tipo_logradouro"),
+        "logradouro_tipo": payload.get("logradouro_tipo"),
         "numero": payload.get("numero"),
         "bairro": payload.get("bairro"),
         "complemento": payload.get("complemento"),
@@ -273,14 +349,14 @@ def update_org(
     db.refresh(org)
 
     return {
-      "ok": True,
-      "id": org.id,
-      "name": org.name,
-      "document": org.document,
-      "address": org.address,
-      "cnae": org.cnae,
-      "opening_date": org.opening_date,
-      "regime": org.regime,
+        "ok": True,
+        "id": org.id,
+        "name": org.name,
+        "document": org.document,
+        "address": org.address,
+        "cnae": org.cnae,
+        "opening_date": org.opening_date,
+        "regime": org.regime,
     }
 
 
