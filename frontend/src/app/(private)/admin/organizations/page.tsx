@@ -23,6 +23,11 @@ type CnpjData = {
   razao_social?: string;
   nome_fantasia?: string;
   logradouro?: string;
+  logradouro_sem_prefixo?: string;
+  descricao_tipo_de_logradouro?: string;
+  descricao_tipo_logradouro?: string;
+  tipo_logradouro?: string;
+  logradouro_tipo?: string;
   numero?: string;
   complemento?: string;
   bairro?: string;
@@ -34,19 +39,6 @@ type CnpjData = {
   data_inicio_atividade?: string;
   natureza_juridica?: string;
 };
-
-function statusLabel(status: string) {
-  const map: Record<string, string> = {
-    all: "Todas",
-    active: "Ativas",
-    inactive: "Inativas",
-    paused: "Pausadas",
-    revoked: "Revogadas",
-    finished: "Finalizadas",
-    trashed: "Lixeira",
-  };
-  return map[status] || status;
-}
 
 function orgStatusLabel(status: string) {
   const map: Record<string, string> = {
@@ -94,20 +86,115 @@ function normalizeDateToApi(value?: string) {
   return v;
 }
 
-function joinAddress(data: CnpjData) {
-  const parts = [
-    data.logradouro,
-    data.numero,
-    data.bairro,
-    data.complemento,
-    data.municipio,
-    data.uf,
-    data.cep,
-  ]
-    .map((x) => (x || "").trim())
-    .filter(Boolean);
+function formatCep(cep?: string) {
+  const digits = (cep || "").replace(/\D/g, "");
+  if (digits.length !== 8) return cep || "";
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}-${digits.slice(5)}`;
+}
 
-  return parts.join(", ");
+function formatTitleCase(value?: string) {
+  if (!value) return "";
+  return value
+    .toLowerCase()
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function joinAddress(data: CnpjData) {
+  const rawStreet =
+    (data.logradouro || "").trim() ||
+    (data.logradouro_sem_prefixo || "").trim();
+
+  const streetType =
+    (data.descricao_tipo_de_logradouro || "").trim() ||
+    (data.descricao_tipo_logradouro || "").trim() ||
+    (data.tipo_logradouro || "").trim() ||
+    (data.logradouro_tipo || "").trim();
+
+  const knownPrefixes = [
+    "R ",
+    "RUA ",
+    "AV ",
+    "AV. ",
+    "AVENIDA ",
+    "AL ",
+    "AL. ",
+    "ALAMEDA ",
+    "TR ",
+    "TRAVESSA ",
+    "TV ",
+    "TV. ",
+    "ROD ",
+    "ROD. ",
+    "RODOVIA ",
+    "EST ",
+    "EST. ",
+    "ESTRADA ",
+    "PC ",
+    "PC. ",
+    "PRAÇA ",
+    "PRACA ",
+    "VL ",
+    "VILA ",
+    "LOT ",
+    "LOTEAMENTO ",
+  ];
+
+  let street = rawStreet;
+
+  if (street) {
+    const upperStreet = street.toUpperCase();
+
+    if (!knownPrefixes.some((prefix) => upperStreet.startsWith(prefix))) {
+      const normalizedType = streetType.toUpperCase().replace(/\.$/, "");
+
+      const typeMap: Record<string, string> = {
+        RUA: "R",
+        R: "R",
+        AVENIDA: "AV",
+        AV: "AV",
+        ALAMEDA: "AL",
+        AL: "AL",
+        TRAVESSA: "TR",
+        TR: "TR",
+        TV: "TV",
+        RODOVIA: "ROD",
+        ROD: "ROD",
+        ESTRADA: "EST",
+        EST: "EST",
+        PRAÇA: "PC",
+        PRACA: "PC",
+        PC: "PC",
+        VILA: "VL",
+        VL: "VL",
+        LOTEAMENTO: "LOT",
+        LOT: "LOT",
+      };
+
+      if (normalizedType && typeMap[normalizedType]) {
+        street = `${typeMap[normalizedType]} ${street}`;
+      }
+    }
+  }
+
+  const line1 = [formatTitleCase(street), data.numero]
+    .filter(Boolean)
+    .join(", ");
+
+  const line2 = [formatTitleCase(data.bairro), formatTitleCase(data.complemento)]
+    .filter(Boolean)
+    .join(", ");
+
+  const line3Base = [formatTitleCase(data.municipio), (data.uf || "").toUpperCase()]
+    .filter(Boolean)
+    .join(" - ");
+
+  const cep = formatCep(data.cep);
+  const line3 = cep ? `${line3Base}${line3Base ? " | " : ""}CEP: ${cep}` : line3Base;
+
+  return [line1, line2, line3].filter(Boolean).join(" • ");
 }
 
 function shortText(value?: string, max = 90) {
@@ -330,7 +417,7 @@ export default function AdminOrganizationsPage() {
     <main className="container">
       <div className="header-row">
         <div>
-          <h1>Organizações ({statusLabel(status)})</h1>
+          <h1>Organizações</h1>
           <p className="muted">
             Total: {orgs.length} | Ativas: {totalAtivas} | Inativas: {totalInativas} | Lixeira:{" "}
             {totalLixeira}
@@ -506,14 +593,15 @@ export default function AdminOrganizationsPage() {
                   marginBottom: 0,
                   background: "rgba(255,255,255,0.02)",
                   border: "1px solid rgba(255,255,255,0.08)",
-                  padding: "14px 16px",
+                  padding: "12px 14px",
                 }}
               >
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "minmax(280px, 1.4fr) minmax(180px, 0.9fr) minmax(220px, 1fr) auto",
-                    gap: 14,
+                    gridTemplateColumns:
+                      "minmax(260px, 1.5fr) minmax(170px, 0.9fr) minmax(210px, 1fr) auto",
+                    gap: 12,
                     alignItems: "center",
                   }}
                 >
@@ -526,10 +614,10 @@ export default function AdminOrganizationsPage() {
                       gap: 4,
                     }}
                   >
-                    <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.2 }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.2 }}>
                       {o.name}
                     </div>
-                    <div className="muted">ID #{o.id}</div>
+                    <div className="muted">ID {o.id}</div>
                   </Link>
 
                   <div style={{ display: "grid", gap: 4 }}>
@@ -552,7 +640,9 @@ export default function AdminOrganizationsPage() {
                     </div>
                     <div>
                       <strong>Endereço:</strong>{" "}
-                      <span className="muted">{shortText(o.address || "não informado", 72)}</span>
+                      <span className="muted">
+                        {shortText(o.address || "não informado", 72)}
+                      </span>
                     </div>
                   </div>
 
