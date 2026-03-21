@@ -10,7 +10,9 @@ type AuditItem = {
   entity_type: string;
   entity_id: number;
   action: string;
+  details?: string;
   detail?: string;
+  actor?: string;
   created_at?: string;
 };
 
@@ -21,6 +23,40 @@ function formatDateBR(value?: string) {
   const dt = new Date(value);
   if (!Number.isNaN(dt.getTime())) return dt.toLocaleString("pt-BR");
   return value;
+}
+
+function translateEntity(entityType: string) {
+  const map: Record<string, string> = {
+    lot: "Lote",
+    organization: "Organização",
+    credential: "Credencial",
+    user: "Usuário",
+    audit: "Auditoria",
+  };
+  return map[entityType] || entityType;
+}
+
+function translateAction(action: string) {
+  const map: Record<string, string> = {
+    create: "Criação",
+    update: "Atualização",
+    delete: "Exclusão",
+    revoke_full: "Revogação total",
+    revoke_partial: "Revogação parcial",
+    recover: "Recuperação",
+    activate: "Ativação",
+    deactivate: "Desativação",
+    pause: "Pausa",
+    restore: "Restauração",
+  };
+  return map[action] || action;
+}
+
+function getActionColor(action: string) {
+  if (action.includes("delete") || action.includes("revoke")) return "#ef4444";
+  if (action.includes("create") || action.includes("activate") || action.includes("restore")) return "#22c55e";
+  if (action.includes("update") || action.includes("pause") || action.includes("deactivate")) return "#f59e0b";
+  return "#9ca3af";
 }
 
 export default function AuditPage() {
@@ -37,7 +73,7 @@ export default function AuditPage() {
     setMessage("");
 
     try {
-      const data = await apiGet("/api/v1/audit");
+      const data = await apiGet("/api/v1/audit-logs");
       setItems((data as AuditItem[]) || []);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao carregar auditoria.";
@@ -86,7 +122,7 @@ export default function AuditPage() {
     if (!ok) return;
 
     try {
-      await apiDelete("/api/v1/audit");
+      await apiDelete("/api/v1/audit-logs");
       setMessage("Auditoria limpa com sucesso.");
       await loadAudit();
     } catch (e) {
@@ -114,7 +150,7 @@ export default function AuditPage() {
       </div>
 
       {message && (
-        <p className={message.toLowerCase().includes("erro") ? "error" : "success"}>
+        <p className={message.toLowerCase().includes("erro") || message.toLowerCase().includes("falhou") ? "error" : "success"}>
           {message}
         </p>
       )}
@@ -142,30 +178,60 @@ export default function AuditPage() {
           <p>Carregando auditoria...</p>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
-            {filtered.map((item) => (
-              <section
-                key={item.id}
-                className="card"
-                style={{ marginBottom: 0, background: "rgba(255,255,255,0.02)" }}
-              >
-                <div style={{ display: "grid", gap: 6 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <strong>
-                      {item.entity_type} #{item.entity_id}
-                    </strong>
-                    <span className="muted">{formatDateBR(item.created_at)}</span>
-                  </div>
+            {filtered.map((item) => {
+              const actionColor = getActionColor(item.action);
 
-                  <div>
-                    <strong>Ação:</strong> {item.action}
-                  </div>
+              return (
+                <section
+                  key={item.id}
+                  className="card"
+                  style={{
+                    marginBottom: 0,
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    padding: "12px 14px",
+                  }}
+                >
+                  <div style={{ display: "grid", gap: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                      <strong>
+                        {translateEntity(item.entity_type)} ID {item.entity_id}
+                      </strong>
+                      <span className="muted">{formatDateBR(item.created_at)}</span>
+                    </div>
 
-                  <div className="muted">{item.detail || "Sem detalhes."}</div>
-                </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <span
+                        style={{
+                          padding: "3px 10px",
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          background: `${actionColor}20`,
+                          color: actionColor,
+                          border: `1px solid ${actionColor}`,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {translateAction(item.action)}
+                      </span>
+
+                      {item.actor ? <span className="muted">por {item.actor}</span> : null}
+                    </div>
+
+                    <div className="muted">
+                      {item.details || item.detail || "Sem detalhes."}
+                    </div>
+                  </div>
+                </section>
+              );
+            })}
+
+            {!filtered.length && (
+              <section className="card" style={{ marginBottom: 0 }}>
+                Nenhum registro encontrado.
               </section>
-            ))}
-
-            {!filtered.length && <section className="card" style={{ marginBottom: 0 }}>Nenhum registro encontrado.</section>}
+            )}
           </div>
         )}
       </section>
