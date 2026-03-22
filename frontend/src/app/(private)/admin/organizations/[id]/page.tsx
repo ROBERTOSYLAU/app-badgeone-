@@ -176,6 +176,8 @@ export default function OrganizationDetailsPage({
   const [issuerUser, setIssuerUser] = useState<IssuerUser | null>(null);
   const [editingIssuerEmail, setEditingIssuerEmail] = useState(false);
   const [issuerEmailDraft, setIssuerEmailDraft] = useState("");
+  const [editingIssuerPassword, setEditingIssuerPassword] = useState(false);
+  const [issuerPasswordDraft, setIssuerPasswordDraft] = useState("");
   const [tab, setTab] = useState<TabKey>("overview");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [noteTitle, setNoteTitle] = useState("");
@@ -263,7 +265,17 @@ export default function OrganizationDetailsPage({
 
     if (usersRes.status === "fulfilled") {
       const issuer = ((usersRes.value as IssuerUser[]) || []).find((u) => u.role === "issuer") || null;
-      setIssuerUser(issuer);
+      if (issuer) {
+        setIssuerUser(issuer);
+      } else {
+        // Auto-provisiona emissor padrão se não existir
+        try {
+          const created = await apiPost(`/api/v1/organizations/${orgId}/ensure-issuer`, {}) as IssuerUser & { password_is_default: boolean };
+          setIssuerUser({ id: created.id, name: "", email: created.email, status: "active", role: "issuer", password_is_default: created.password_is_default });
+        } catch {
+          setIssuerUser(null);
+        }
+      }
     }
   }
 
@@ -295,6 +307,19 @@ export default function OrganizationDetailsPage({
       setMessage("Login do emissor atualizado.");
     } catch (e) {
       setApiError("Erro ao atualizar login.", e);
+    }
+  }
+
+  async function saveIssuerPassword() {
+    if (!issuerUser || !issuerPasswordDraft.trim()) return;
+    try {
+      await apiPatch(`/api/v1/users/${issuerUser.id}`, { password: issuerPasswordDraft.trim() });
+      setIssuerUser((prev) => prev ? { ...prev, password_is_default: false } : prev);
+      setEditingIssuerPassword(false);
+      setIssuerPasswordDraft("");
+      setMessage("Senha do emissor atualizada pelo admin.");
+    } catch (e) {
+      setApiError("Erro ao atualizar senha.", e);
     }
   }
 
@@ -945,7 +970,8 @@ export default function OrganizationDetailsPage({
 
           {/* ── Acesso Emissor ── */}
           <section style={{ marginBottom: 10, background: "var(--card, #fff)", border: "1px solid var(--line)", borderRadius: 10, padding: "16px 20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            {/* Cabeçalho */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ background: "#1A3A5C", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 6, letterSpacing: "0.5px" }}>
                   ACESSO EMISSOR
@@ -963,7 +989,7 @@ export default function OrganizationDetailsPage({
               </div>
               {issuerUser && (
                 <button onClick={resetIssuerPassword}
-                  style={{ background: "none", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                  style={{ background: "none", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 6, padding: "4px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
                   Redefinir para Emissor123
                 </button>
               )}
@@ -971,87 +997,127 @@ export default function OrganizationDetailsPage({
 
             {issuerUser ? (
               <>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10, alignItems: "end" }}>
-                  {/* Login (editável) */}
+                {/* Grade: LOGIN | SENHA | COPIAR */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 12, alignItems: "start" }}>
+
+                  {/* LOGIN */}
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.7px" }}>Login</span>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.7px" }}>Login (e-mail)</span>
                       {!editingIssuerEmail && (
-                        <button onClick={() => { setIssuerEmailDraft(issuerUser.email); setEditingIssuerEmail(true); }}
-                          style={{ background: "none", border: "none", fontSize: 11, color: "#1A3A5C", cursor: "pointer", fontWeight: 600, padding: 0 }}>
-                          ✏️ Editar
+                        <button onClick={() => { setIssuerEmailDraft(issuerUser.email); setEditingIssuerEmail(true); setEditingIssuerPassword(false); }}
+                          style={{ background: "#eff6ff", border: "1px solid #93c5fd", color: "#1d4ed8", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                          Editar
                         </button>
                       )}
                     </div>
                     {editingIssuerEmail ? (
-                      <div style={{ display: "flex", gap: 4 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                         <input
                           type="email"
                           value={issuerEmailDraft}
                           onChange={(e) => setIssuerEmailDraft(e.target.value)}
-                          style={{ flex: 1, fontSize: 13, padding: "7px 10px", borderRadius: 7, border: "1px solid #1A3A5C", outline: "none" }}
+                          placeholder="novo@email.com.br"
+                          style={{ fontSize: 13, padding: "8px 10px", borderRadius: 7, border: "1px solid #1A3A5C", outline: "none", width: "100%", boxSizing: "border-box" }}
                           autoFocus
                           onKeyDown={(e) => { if (e.key === "Enter") saveIssuerEmail(); if (e.key === "Escape") setEditingIssuerEmail(false); }}
                         />
-                        <button onClick={saveIssuerEmail}
-                          style={{ background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 7, padding: "0 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                          Salvar
-                        </button>
-                        <button onClick={() => setEditingIssuerEmail(false)}
-                          style={{ background: "none", border: "1px solid var(--line)", borderRadius: 7, padding: "0 8px", fontSize: 12, cursor: "pointer" }}>
-                          ✕
-                        </button>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={saveIssuerEmail}
+                            style={{ flex: 1, background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 6, padding: "6px 0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                            Salvar
+                          </button>
+                          <button onClick={() => setEditingIssuerEmail(false)}
+                            style={{ background: "none", border: "1px solid var(--line)", borderRadius: 6, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}>
+                            Cancelar
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg-soft)", borderRadius: 7, padding: "8px 12px", border: "1px solid var(--line)" }}>
-                        <code style={{ fontSize: 13, color: "var(--primary)", fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {issuerUser.email}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg-soft)", borderRadius: 7, padding: "9px 12px", border: "1px solid var(--line)", minHeight: 38 }}>
+                        <code style={{ fontSize: 13, color: "var(--primary)", fontWeight: 700, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {issuerUser.email || "—"}
                         </code>
                         <button onClick={() => copyToClipboard(issuerUser.email, "email")}
-                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, padding: "0 2px", flexShrink: 0 }}>
+                          title="Copiar login"
+                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: "0 2px", flexShrink: 0 }}>
                           {copiedField === "email" ? "✅" : "📋"}
                         </button>
                       </div>
                     )}
                   </div>
 
-                  {/* Senha */}
+                  {/* SENHA */}
                   <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 5 }}>Senha</div>
-                    {issuerUser.password_is_default !== false ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg-soft)", borderRadius: 7, padding: "8px 12px", border: "1px solid var(--line)" }}>
-                        <code style={{ fontSize: 15, color: "#16a34a", fontWeight: 700, flex: 1, letterSpacing: "1px" }}>Emissor123</code>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.7px" }}>Senha</span>
+                      {!editingIssuerPassword && (
+                        <button onClick={() => { setIssuerPasswordDraft(""); setEditingIssuerPassword(true); setEditingIssuerEmail(false); }}
+                          style={{ background: "#eff6ff", border: "1px solid #93c5fd", color: "#1d4ed8", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                          Editar Senha
+                        </button>
+                      )}
+                    </div>
+                    {editingIssuerPassword ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <input
+                          type="password"
+                          value={issuerPasswordDraft}
+                          onChange={(e) => setIssuerPasswordDraft(e.target.value)}
+                          placeholder="Nova senha (mín. 6 chars)"
+                          style={{ fontSize: 13, padding: "8px 10px", borderRadius: 7, border: "1px solid #1A3A5C", outline: "none", width: "100%", boxSizing: "border-box" }}
+                          autoFocus
+                          onKeyDown={(e) => { if (e.key === "Enter") saveIssuerPassword(); if (e.key === "Escape") setEditingIssuerPassword(false); }}
+                        />
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={saveIssuerPassword}
+                            style={{ flex: 1, background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 6, padding: "6px 0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                            Salvar
+                          </button>
+                          <button onClick={() => setEditingIssuerPassword(false)}
+                            style={{ background: "none", border: "1px solid var(--line)", borderRadius: 6, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    ) : issuerUser.password_is_default !== false ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f0fdf4", borderRadius: 7, padding: "9px 12px", border: "1px solid #86efac", minHeight: 38 }}>
+                        <code style={{ fontSize: 14, color: "#16a34a", fontWeight: 700, flex: 1, letterSpacing: "1px" }}>Emissor123</code>
                         <button onClick={() => copyToClipboard("Emissor123", "senha")}
-                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, padding: "0 2px", flexShrink: 0 }}>
+                          title="Copiar senha"
+                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: "0 2px", flexShrink: 0 }}>
                           {copiedField === "senha" ? "✅" : "📋"}
                         </button>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fef9ec", borderRadius: 7, padding: "8px 12px", border: "1px solid #fcd34d" }}>
-                        <span style={{ fontSize: 13, color: "#92400e", fontWeight: 600, flex: 1 }}>🔒 Senha personalizada ativa</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fef9ec", borderRadius: 7, padding: "9px 12px", border: "1px solid #fcd34d", minHeight: 38 }}>
+                        <span style={{ fontSize: 14, color: "#78350f", fontWeight: 700, flex: 1, letterSpacing: "3px" }}>••••••••</span>
+                        <span style={{ fontSize: 10, color: "#92400e", fontWeight: 600, whiteSpace: "nowrap" }}>personalizada</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Copiar tudo */}
-                  <div>
+                  {/* COPIAR TUDO */}
+                  <div style={{ paddingTop: 22 }}>
                     <button
-                      onClick={() => copyToClipboard(`Login: ${issuerUser.email}\nSenha: ${issuerUser.password_is_default !== false ? "Emissor123" : "(personalizada)"}`, "ambos")}
-                      style={{ background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 7, padding: "9px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+                      onClick={() => copyToClipboard(`Login: ${issuerUser.email}\nSenha: ${issuerUser.password_is_default !== false ? "Emissor123" : "(senha personalizada)"}`, "ambos")}
+                      style={{ background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 7, padding: "9px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", height: 38 }}>
                       {copiedField === "ambos" ? "✅ Copiado!" : "📋 Copiar tudo"}
                     </button>
                   </div>
                 </div>
-                <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 8 }}>
-                  O emissor pode alterar e-mail e senha após o primeiro acesso
-                  {issuerUser.password_is_default !== false ? " · Senha padrão de primeiro acesso: Emissor123" : " · Emissor definiu senha própria"}
+
+                <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 10, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+                  {issuerUser.password_is_default !== false
+                    ? "Senha padrão de primeiro acesso · O emissor pode alterar após o login"
+                    : "Emissor definiu senha própria · Use 'Redefinir para Emissor123' se precisar recuperar o acesso"}
                 </p>
               </>
             ) : (
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>Nenhum emissor vinculado a esta organização.</p>
                 <button onClick={createIssuer}
-                  style={{ background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                  style={{ background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 6, padding: "7px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                   + Criar emissor padrão
                 </button>
               </div>

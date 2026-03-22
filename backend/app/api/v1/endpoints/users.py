@@ -82,19 +82,27 @@ def list_users(
     ]
 
 
-class UserEmailUpdate(BaseModel):
-    email: EmailStr
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    password: str | None = None
 
 
 @router.patch("/{user_id}")
-def update_user(user_id: int, payload: UserEmailUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
-    """Admin atualiza o e-mail do emissor vinculado à organização."""
+def update_user(user_id: int, payload: UserUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Admin atualiza e-mail e/ou senha do emissor."""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
-    if db.query(User).filter(User.email == payload.email, User.id != user_id).first():
-        raise HTTPException(status_code=409, detail="E-mail já está em uso")
-    user.email = payload.email
+    if payload.email is not None:
+        if db.query(User).filter(User.email == payload.email, User.id != user_id).first():
+            raise HTTPException(status_code=409, detail="E-mail já está em uso")
+        user.email = payload.email
+    if payload.password is not None:
+        if len(payload.password) < 6:
+            raise HTTPException(status_code=400, detail="Senha deve ter no mínimo 6 caracteres")
+        user.password_hash = hash_password(payload.password)
+        if hasattr(user, "password_is_default"):
+            user.password_is_default = False
     db.commit()
     db.refresh(user)
     return {

@@ -444,7 +444,13 @@ def ensure_issuer(org_id: int, db: Session = Depends(get_db), _=Depends(require_
     if not org:
         raise HTTPException(status_code=404, detail="Organização não encontrada")
 
-    issuer_email = f"emissor{org_id}@badgeone.com.br"
+    # Gera email no formato emissor@{cnpj_digits}.badgeone.com.br quando há CNPJ
+    cnpj_digits = "".join(filter(str.isdigit, org.document or ""))
+    if cnpj_digits:
+        issuer_email = f"emissor@{cnpj_digits}.badgeone.com.br"
+    else:
+        issuer_email = f"emissor{org_id}@badgeone.com.br"
+
     existing = db.query(User).filter(User.organization_id == org_id, User.role == "issuer").first()
 
     if existing:
