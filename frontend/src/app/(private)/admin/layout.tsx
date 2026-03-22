@@ -19,14 +19,14 @@ function AdminSidebar() {
   return (
     <aside
       style={{
-        width: 220,
+        width: 180,
         minHeight: "100vh",
         background: "#081748",
         borderRight: "1px solid rgba(255,255,255,0.08)",
-        padding: 14,
+        padding: 10,
         display: "flex",
         flexDirection: "column",
-        gap: 14,
+        gap: 10,
         position: "sticky",
         top: 0,
       }}
@@ -37,16 +37,16 @@ function AdminSidebar() {
           display: "flex",
           alignItems: "center",
           gap: 12,
-          padding: "10px 12px",
-          borderRadius: 12,
+          padding: "7px 10px",
+          borderRadius: 8,
           textDecoration: "none",
           color: "#fff",
-          fontWeight: 800,
-          fontSize: 28,
+          fontWeight: 700,
+          fontSize: 20,
         }}
       >
-        <span style={{ fontSize: 30 }}>🏅</span>
-        <span style={{ fontSize: 16, fontWeight: 700 }}>Badge One</span>
+        <span style={{ fontSize: 22 }}>🏅</span>
+        <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: "nowrap" }}>Badge One</span>
       </Link>
 
       <nav style={{ display: "grid", gap: 8 }}>
@@ -61,7 +61,7 @@ function AdminSidebar() {
                 alignItems: "center",
                 gap: 10,
                 padding: "12px 14px",
-                borderRadius: 12,
+                borderRadius: 8,
                 textDecoration: "none",
                 color: "#fff",
                 background: active ? "rgba(37, 99, 235, 0.35)" : "transparent",
@@ -119,7 +119,7 @@ export default function AdminLayout({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "220px 1fr",
+          gridTemplateColumns: "180px 1fr",
           minHeight: "100vh",
           background: "#03113b",
         }}

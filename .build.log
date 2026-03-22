@@ -1,0 +1,37 @@
+2026-03-20T16:01:06.932342 Project directory: /root/app-badgeone-
+2026-03-20T16:01:06.936323 Pulling project images
+2026-03-20T16:01:06.937033 ------------------------------
+2026-03-20T16:01:07.006337 time="2026-03-20T16:01:07Z" level=warning msg="/root/app-badgeone-/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+2026-03-20T16:01:07.145145  nginx Skipped No image to be pulled
+2026-03-20T16:01:07.145216  backend Skipped No image to be pulled
+2026-03-20T16:01:07.145229  frontend Skipped No image to be pulled
+2026-03-20T16:01:07.146249  Image postgres:15-alpine Pulling 
+2026-03-20T16:01:07.146388  Image redis:7-alpine Pulling 
+2026-03-20T16:01:08.373804  Image redis:7-alpine Pulled 
+2026-03-20T16:01:08.387162  Image postgres:15-alpine Pulled 
+2026-03-20T16:01:08.463747 ------------------------------
+2026-03-20T16:01:08.463888 Deploying project
+2026-03-20T16:01:08.464701 ------------------------------
+2026-03-20T16:01:08.567822 time="2026-03-20T16:01:08Z" level=warning msg="/root/app-badgeone-/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+2026-03-20T16:01:08.730256  Container badgeone_postgres Recreate 
+2026-03-20T16:01:08.730310  Container badgeone_redis Recreate 
+2026-03-20T16:01:09.926335  Container badgeone_redis Recreated 
+2026-03-20T16:01:09.994684  Container badgeone_postgres Recreated 
+2026-03-20T16:01:09.994920  Container badgeone_backend Recreate 
+2026-03-20T16:01:12.661997  Container badgeone_backend Recreated 
+2026-03-20T16:01:12.662047  Container badgeone_frontend Recreate 
+2026-03-20T16:01:13.382217  Container badgeone_frontend Recreated 
+2026-03-20T16:01:13.382276  Container badgeone_nginx Recreate 
+2026-03-20T16:01:13.862771  Container badgeone_nginx Recreated 
+2026-03-20T16:01:13.909486  Container badgeone_postgres Starting 
+2026-03-20T16:01:13.909866  Container badgeone_redis Starting 
+2026-03-20T16:01:14.348138  Container badgeone_redis Started 
+2026-03-20T16:01:14.376905  Container badgeone_postgres Started 
+2026-03-20T16:01:14.376959  Container badgeone_backend Starting 
+2026-03-20T16:01:14.861145  Container badgeone_backend Started 
+2026-03-20T16:01:14.861196  Container badgeone_frontend Starting 
+2026-03-20T16:01:15.289162  Container badgeone_frontend Started 
+2026-03-20T16:01:15.289223  Container badgeone_nginx Starting 
+2026-03-20T16:01:15.759341  Container badgeone_nginx Started 
+2026-03-20T16:01:15.773191 ------------------------------
+2026-03-20T16:01:15.773233 Project deployed successfully

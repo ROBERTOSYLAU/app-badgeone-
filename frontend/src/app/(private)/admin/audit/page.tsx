@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiGet } from "../../../lib/api";
-import { useAuth } from "../../../lib/auth-context";
+import { apiGet } from "../../../../lib/api";
+import { useAuth } from "../../../../lib/auth-context";
 
 type OnboardingStatus = {
   has_organization: boolean;
