@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { getHistory, clearHistory, HistoryEntry } from "../../../../lib/history";
+import { useConfirm } from "../../../../lib/confirm-modal";
 
 export default function HistoricoPage() {
+  const confirm = useConfirm();
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [search, setSearch] = useState("");
 
@@ -15,8 +17,9 @@ export default function HistoricoPage() {
     load();
   }, []);
 
-  function handleClear() {
-    if (!window.confirm("Apagar todo o histórico de ações?")) return;
+  async function handleClear() {
+    const ok = await confirm("Apagar todo o histórico de ações?", { danger: true, confirmText: "Apagar tudo" });
+    if (!ok) return;
     clearHistory();
     setEntries([]);
   }

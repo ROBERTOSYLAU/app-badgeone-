@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { apiDelete, apiGet, apiPost } from "../../../../lib/api";
 import { useAuth } from "../../../../lib/auth-context";
 import { logAction } from "../../../../lib/history";
+import { useToast } from "../../../../lib/toast-context";
+import { useConfirm } from "../../../../lib/confirm-modal";
 
 type Org = {
   id: number;
@@ -207,6 +209,8 @@ function shortText(value?: string, max = 90) {
 export default function AdminOrganizationsPage() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [status, setStatus] = useState("active");
@@ -223,7 +227,6 @@ export default function AdminOrganizationsPage() {
 
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [loadingPage, setLoadingPage] = useState(true);
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (isLoading) return;
@@ -238,14 +241,13 @@ export default function AdminOrganizationsPage() {
 
   async function loadOrgs() {
     setLoadingPage(true);
-    setMessage("");
 
     try {
       const data = await apiGet("/api/v1/organizations");
       setOrgs((data as Org[]) || []);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao carregar organizações.";
-      setMessage(msg);
+      toast.error(msg);
       setOrgs([]);
     } finally {
       setLoadingPage(false);
@@ -254,7 +256,7 @@ export default function AdminOrganizationsPage() {
 
   async function toggleOrgStatus(id: number, currentStatus: string) {
     const acao = currentStatus === "active" ? "pausar" : "ativar";
-    const ok = window.confirm(`Tem certeza que deseja ${acao} esta organização?`);
+    const ok = await confirm(`Tem certeza que deseja ${acao} esta organização?`, { danger: currentStatus === "active" });
     if (!ok) return;
 
     try {
@@ -263,72 +265,67 @@ export default function AdminOrganizationsPage() {
       } else {
         await apiPost(`/api/v1/organizations/${id}/activate`, {});
       }
-      setMessage("Status da organização atualizado com sucesso.");
+      toast.success("Status da organização atualizado com sucesso.");
       await loadOrgs();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao alterar status.";
-      setMessage(msg);
+      toast.error(e instanceof Error ? e.message : "Erro ao alterar status.");
     }
   }
 
   async function moveOrgToTrash(id: number) {
-    const ok = window.confirm("Tem certeza que deseja mover esta organização para a lixeira?");
+    const ok = await confirm("Tem certeza que deseja mover esta organização para a lixeira?", { danger: true, confirmText: "Mover para lixeira" });
     if (!ok) return;
 
     try {
       await apiDelete(`/api/v1/organizations/${id}`);
       logAction("Org enviada para lixeira", `ID ${id}`);
-      setMessage("Organização movida para a lixeira.");
+      toast.success("Organização movida para a lixeira.");
       await loadOrgs();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao mover organização para lixeira.";
-      setMessage(msg);
+      toast.error(e instanceof Error ? e.message : "Erro ao mover organização para lixeira.");
     }
   }
 
   async function restoreOrg(id: number) {
-    const ok = window.confirm("Tem certeza que deseja restaurar esta organização?");
+    const ok = await confirm("Tem certeza que deseja restaurar esta organização?", { confirmText: "Restaurar" });
     if (!ok) return;
 
     try {
       await apiPost(`/api/v1/organizations/${id}/restore`, {});
       logAction("Org restaurada", `ID ${id}`);
-      setMessage("Organização restaurada com sucesso.");
+      toast.success("Organização restaurada com sucesso.");
       await loadOrgs();
       setStatus("all");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao restaurar organização.";
-      setMessage(msg);
+      toast.error(e instanceof Error ? e.message : "Erro ao restaurar organização.");
     }
   }
 
   async function permanentlyDeleteOrg(id: number, orgName: string) {
-    const ok = window.confirm(
-      `Tem certeza que deseja excluir permanentemente a organização "${orgName}"? Esta ação não poderá ser desfeita.`
+    const ok = await confirm(
+      `Tem certeza que deseja excluir permanentemente a organização "${orgName}"? Esta ação não poderá ser desfeita.`,
+      { danger: true, confirmText: "Excluir permanentemente" }
     );
     if (!ok) return;
 
     try {
       await apiDelete(`/api/v1/organizations/${id}?force=true`);
       logAction("Org excluída permanentemente", `ID ${id} · ${orgName}`);
-      setMessage("Organização excluída permanentemente.");
+      toast.success("Organização excluída permanentemente.");
       await loadOrgs();
     } catch (e) {
-      const msg =
-        e instanceof Error ? e.message : "Erro ao remover organização permanentemente.";
-      setMessage(msg);
+      toast.error(e instanceof Error ? e.message : "Erro ao remover organização permanentemente.");
     }
   }
 
   async function lookupCnpj() {
     const cleanCnpj = cnpj.replace(/\D/g, "");
     if (cleanCnpj.length !== 14) {
-      setMessage("CNPJ deve ter 14 dígitos.");
+      toast.error("CNPJ deve ter 14 dígitos.");
       return;
     }
 
     setLoadingCnpj(true);
-    setMessage("");
 
     try {
       const data = (await apiGet(`/api/v1/organizations/cnpj/${cleanCnpj}`)) as CnpjData;
@@ -345,10 +342,9 @@ export default function AdminOrganizationsPage() {
       }
 
       setRegime(data.natureza_juridica || "");
-      setMessage("Dados do CNPJ carregados com sucesso.");
+      toast.success("Dados do CNPJ carregados com sucesso.");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao buscar CNPJ.";
-      setMessage(msg);
+      toast.error(e instanceof Error ? e.message : "Erro ao buscar CNPJ.");
     } finally {
       setLoadingCnpj(false);
     }
@@ -356,7 +352,6 @@ export default function AdminOrganizationsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setMessage("");
 
     try {
       const payload = {
@@ -370,7 +365,7 @@ export default function AdminOrganizationsPage() {
 
       await apiPost("/api/v1/organizations", payload);
       logAction("Organização criada", payload.name);
-      setMessage("Organização criada com sucesso!");
+      toast.success("Organização criada com sucesso!");
       setShowForm(false);
       await loadOrgs();
 
@@ -382,8 +377,7 @@ export default function AdminOrganizationsPage() {
       setOpeningDate("");
       setRegime("");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao criar organização.";
-      setMessage(msg);
+      toast.error(e instanceof Error ? e.message : "Erro ao criar organização.");
     }
   }
 
@@ -447,18 +441,6 @@ export default function AdminOrganizationsPage() {
           </button>
         </div>
       </div>
-
-      {message && (
-        <p
-          className={
-            message.toLowerCase().includes("erro") || message.toLowerCase().includes("falhou")
-              ? "error"
-              : "success"
-          }
-        >
-          {message}
-        </p>
-      )}
 
       {showForm && (
         <section className="card">

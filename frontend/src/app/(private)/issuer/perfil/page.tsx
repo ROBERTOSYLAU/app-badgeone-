@@ -4,28 +4,28 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../../lib/auth-context";
 import { apiPut } from "../../../../lib/api";
+import { useToast } from "../../../../lib/toast-context";
 
 export default function PerfilPage() {
   const router = useRouter();
   const { user, refreshSession } = useAuth();
+  const toast = useToast();
 
   const [email, setEmail] = useState(user?.email || "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setResult(null);
 
     if (newPassword && newPassword !== confirmPassword) {
-      setResult({ ok: false, msg: "A nova senha e a confirmação não coincidem." });
+      toast.error("A nova senha e a confirmação não coincidem.");
       return;
     }
     if (newPassword && newPassword.length < 6) {
-      setResult({ ok: false, msg: "A nova senha deve ter pelo menos 6 caracteres." });
+      toast.error("A nova senha deve ter pelo menos 6 caracteres.");
       return;
     }
 
@@ -36,13 +36,13 @@ export default function PerfilPage() {
         current_password: currentPassword,
         new_password: newPassword || undefined,
       });
-      setResult({ ok: true, msg: "Dados atualizados com sucesso!" });
+      toast.success("Dados atualizados com sucesso!");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       await refreshSession();
     } catch (err: any) {
-      setResult({ ok: false, msg: err.message || "Erro ao atualizar. Verifique sua senha atual." });
+      toast.error(err.message || "Erro ao atualizar. Verifique sua senha atual.");
     } finally {
       setLoading(false);
     }
@@ -143,21 +143,6 @@ export default function PerfilPage() {
           </button>
         </form>
 
-        {result && (
-          <div
-            style={{
-              marginTop: 16,
-              padding: "12px 16px",
-              borderRadius: 8,
-              fontSize: 13,
-              background: result.ok ? "#dcfce7" : "#fee2e2",
-              border: `1px solid ${result.ok ? "#86efac" : "#fca5a5"}`,
-              color: result.ok ? "#166534" : "#991b1b",
-            }}
-          >
-            {result.msg}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../../../lib/api";
 import { useAuth } from "../../../../../lib/auth-context";
+import { useToast } from "../../../../../lib/toast-context";
+import { useConfirm } from "../../../../../lib/confirm-modal";
 
 type Org = {
   id: number;
@@ -167,6 +169,8 @@ export default function OrganizationDetailsPage({
 }) {
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   const lotFormRef = useRef<HTMLDivElement | null>(null);
 
   const [org, setOrg] = useState<Org | null>(null);
@@ -184,7 +188,6 @@ export default function OrganizationDetailsPage({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [noteTitle, setNoteTitle] = useState("");
   const [notes, setNotes] = useState("");
-  const [message, setMessage] = useState("");
   const [isBusy, setIsBusy] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -221,7 +224,7 @@ export default function OrganizationDetailsPage({
 
   function setApiError(prefix: string, err: unknown) {
     const msg = err instanceof Error ? err.message : prefix;
-    setMessage(msg || prefix);
+    toast.error(msg || prefix);
   }
 
   async function loadAll() {
@@ -302,11 +305,12 @@ export default function OrganizationDetailsPage({
 
   async function resetIssuerPassword() {
     if (!issuerUser) return;
-    if (!confirm(`Redefinir a senha de "${issuerUser.email}" para Emissor123?`)) return;
+    const ok = await confirm(`Redefinir a senha de "${issuerUser.email}" para Emissor123?`, { danger: true, confirmText: "Redefinir" });
+    if (!ok) return;
     try {
       await apiPost(`/api/v1/users/${issuerUser.id}/reset-password`, {});
       setIssuerUser((prev) => prev ? { ...prev, password_is_default: true } : prev);
-      setMessage("Senha redefinida para Emissor123.");
+      toast.success("Senha redefinida para Emissor123.");
     } catch (e) {
       setApiError("Erro ao redefinir senha.", e);
     }
@@ -318,7 +322,7 @@ export default function OrganizationDetailsPage({
       const res = await apiPatch(`/api/v1/users/${issuerUser.id}`, { email: issuerEmailDraft.trim() }) as IssuerUser;
       setIssuerUser((prev) => prev ? { ...prev, email: res.email } : prev);
       setEditingIssuerEmail(false);
-      setMessage("Login do emissor atualizado.");
+      toast.success("Login do emissor atualizado.");
     } catch (e) {
       setApiError("Erro ao atualizar login.", e);
     }
@@ -331,7 +335,7 @@ export default function OrganizationDetailsPage({
       setIssuerUser((prev) => prev ? { ...prev, password_is_default: false } : prev);
       setEditingIssuerPassword(false);
       setIssuerPasswordDraft("");
-      setMessage("Senha do emissor atualizada pelo admin.");
+      toast.success("Senha do emissor atualizada pelo admin.");
     } catch (e) {
       setApiError("Erro ao atualizar senha.", e);
     }
@@ -341,7 +345,7 @@ export default function OrganizationDetailsPage({
     try {
       const res = await apiPost(`/api/v1/organizations/${orgId}/ensure-issuer`, {}) as IssuerUser & { password_is_default: boolean };
       await loadAll();
-      setMessage(`Emissor criado: ${res.email}`);
+      toast.success(`Emissor criado: ${res.email}`);
     } catch (e) {
       setApiError("Erro ao criar emissor.", e);
     }
@@ -357,7 +361,7 @@ export default function OrganizationDetailsPage({
 
     loadAll().catch((e) => {
       console.error("Erro geral na página de organização:", e);
-      setMessage("Erro ao carregar a organização.");
+      toast.error("Erro ao carregar a organização.");
     });
   }, [user, isLoading, orgId, router]);
 
@@ -384,7 +388,7 @@ export default function OrganizationDetailsPage({
   async function lookupCnpjAndFill() {
     const raw = (editDocument || "").replace(/\D/g, "");
     if (raw.length !== 14) {
-      setMessage("Informe um CNPJ válido com 14 dígitos.");
+      toast.error("Informe um CNPJ válido com 14 dígitos.");
       return;
     }
 
@@ -405,7 +409,7 @@ export default function OrganizationDetailsPage({
       if (data.data_inicio_atividade) setEditOpeningDate(formatDateBR(data.data_inicio_atividade));
       if (data.natureza_juridica) setEditRegime(data.natureza_juridica);
 
-      setMessage("Dados do CNPJ carregados com sucesso.");
+      toast.success("Dados do CNPJ carregados com sucesso.");
     } catch (e) {
       setApiError("Erro ao consultar CNPJ.", e);
     } finally {
@@ -417,7 +421,7 @@ export default function OrganizationDetailsPage({
     setIsBusy(true);
     try {
       await apiPost("/api/v1/organizations/migrate/add-fields", {});
-      setMessage("Migração executada com sucesso. Agora salve novamente a organização.");
+      toast.info("Migração executada com sucesso. Agora salve novamente a organização.");
       await loadAll();
     } catch (e) {
       setApiError("Erro ao executar migração.", e);
@@ -428,12 +432,12 @@ export default function OrganizationDetailsPage({
 
   async function deactivateOrganization() {
     if (!org) return;
-    const ok = window.confirm(`Tem certeza que deseja pausar a organização ${org.name}?`);
+    const ok = await confirm(`Tem certeza que deseja pausar a organização ${org.name}?`, { danger: true, confirmText: "Pausar" });
     if (!ok) return;
 
     try {
       await apiPost(`/api/v1/organizations/${org.id}/deactivate`, {});
-      setMessage("Organização pausada com sucesso.");
+      toast.success("Organização pausada com sucesso.");
       await loadAll();
     } catch (e) {
       setApiError("Erro ao pausar organização.", e);
@@ -442,12 +446,12 @@ export default function OrganizationDetailsPage({
 
   async function activateOrganization() {
     if (!org) return;
-    const ok = window.confirm(`Tem certeza que deseja ativar a organização ${org.name}?`);
+    const ok = await confirm(`Tem certeza que deseja ativar a organização ${org.name}?`, { confirmText: "Ativar" });
     if (!ok) return;
 
     try {
       await apiPost(`/api/v1/organizations/${org.id}/activate`, {});
-      setMessage("Organização ativada com sucesso.");
+      toast.success("Organização ativada com sucesso.");
       await loadAll();
     } catch (e) {
       setApiError("Erro ao ativar organização.", e);
@@ -456,12 +460,12 @@ export default function OrganizationDetailsPage({
 
   async function deleteOrganization() {
     if (!org) return;
-    const ok = window.confirm(`Tem certeza que deseja mover ${org.name} para a lixeira?`);
+    const ok = await confirm(`Tem certeza que deseja mover ${org.name} para a lixeira?`, { danger: true, confirmText: "Mover para lixeira" });
     if (!ok) return;
 
     try {
       await apiDelete(`/api/v1/organizations/${org.id}`);
-      setMessage("Organização movida para lixeira.");
+      toast.success("Organização movida para lixeira.");
       await loadAll();
       setTab("trash");
     } catch (e) {
@@ -471,8 +475,9 @@ export default function OrganizationDetailsPage({
 
   async function permanentDeleteOrganization() {
     if (!org) return;
-    const ok = window.confirm(
-      `Tem certeza que deseja excluir permanentemente ${org.name}? Esta ação não poderá ser desfeita.`
+    const ok = await confirm(
+      `Tem certeza que deseja excluir permanentemente ${org.name}? Esta ação não poderá ser desfeita.`,
+      { danger: true, confirmText: "Excluir permanentemente" }
     );
     if (!ok) return;
 
@@ -486,12 +491,12 @@ export default function OrganizationDetailsPage({
 
   async function restoreOrganization() {
     if (!org) return;
-    const ok = window.confirm(`Tem certeza que deseja restaurar ${org.name}?`);
+    const ok = await confirm(`Tem certeza que deseja restaurar ${org.name}?`, { confirmText: "Restaurar" });
     if (!ok) return;
 
     try {
       await apiPost(`/api/v1/organizations/${org.id}/restore`, {});
-      setMessage("Organização restaurada.");
+      toast.success("Organização restaurada.");
       await loadAll();
       setTab("overview");
     } catch (e) {
@@ -507,7 +512,7 @@ export default function OrganizationDetailsPage({
         title: noteTitle || null,
         content: notes,
       });
-      setMessage("Anotação salva.");
+      toast.success("Anotação salva.");
       setNoteTitle("");
       setNotes("");
       await loadAll();
@@ -517,13 +522,13 @@ export default function OrganizationDetailsPage({
   }
 
   async function removeNote(noteId: number) {
-    const ok = window.confirm("Tem certeza que deseja remover esta anotação?");
+    const ok = await confirm("Tem certeza que deseja remover esta anotação?", { danger: true, confirmText: "Remover" });
     if (!ok) return;
 
     try {
       await apiDelete(`/api/v1/organization-notes/${noteId}`);
       await loadAll();
-      setMessage("Anotação removida.");
+      toast.success("Anotação removida.");
     } catch (e) {
       setApiError("Erro ao remover anotação.", e);
     }
@@ -536,28 +541,29 @@ export default function OrganizationDetailsPage({
     try {
       await apiPatch(`/api/v1/lots/${lotId}`, patch);
       await loadAll();
-      setMessage("Lote atualizado.");
+      toast.success("Lote atualizado.");
     } catch (e) {
       setApiError("Erro ao atualizar lote.", e);
     }
   }
 
   async function moveLotToTrash(l: Lot) {
-    const ok = window.confirm(`Tem certeza que deseja mover o lote ${l.title || "#" + l.id} para a lixeira?`);
+    const ok = await confirm(`Tem certeza que deseja mover o lote ${l.title || "#" + l.id} para a lixeira?`, { danger: true, confirmText: "Mover para lixeira" });
     if (!ok) return;
     await updateLot(l.id, { status: "trashed" });
   }
 
   async function revokeLotFlow(l: Lot) {
-    const full = window.confirm(
-      `Deseja revogar totalmente o lote ${l.title || "#" + l.id}?\n\nOK = total\nCancelar = parcial`
+    const full = await confirm(
+      `Deseja revogar totalmente o lote ${l.title || "#" + l.id}? Clique em "Total" para revogar tudo, ou Cancelar para revogar parcialmente via prompt.`,
+      { danger: true, confirmText: "Revogar Total" }
     );
 
     if (full) {
       try {
         await apiPost(`/api/v1/lots/${l.id}/revoke`, { mode: "full" });
         await loadAll();
-        setMessage("Lote revogado totalmente.");
+        toast.success("Lote revogado totalmente.");
       } catch (e) {
         setApiError("Erro ao revogar lote.", e);
       }
@@ -574,14 +580,14 @@ export default function OrganizationDetailsPage({
         quantity: qty,
       });
       await loadAll();
-      setMessage("Revogação parcial concluída.");
+      toast.success("Revogação parcial concluída.");
     } catch (e) {
       setApiError("Erro ao revogar lote parcialmente.", e);
     }
   }
 
   async function recoverLotFlow(l: Lot) {
-    const ok = window.confirm(`Tem certeza que deseja recuperar o lote ${l.title || "#" + l.id}?`);
+    const ok = await confirm(`Tem certeza que deseja recuperar o lote ${l.title || "#" + l.id}?`, { confirmText: "Recuperar" });
     if (!ok) return;
 
     const qtyInput = window.prompt("Quantidade para recuperar (opcional):", "0");
@@ -593,7 +599,7 @@ export default function OrganizationDetailsPage({
         to_status: "active",
       });
       await loadAll();
-      setMessage("Lote recuperado com sucesso.");
+      toast.success("Lote recuperado com sucesso.");
     } catch (e) {
       setApiError("Erro ao recuperar lote.", e);
     }
@@ -603,20 +609,20 @@ export default function OrganizationDetailsPage({
     try {
       await apiPatch(`/api/v1/credentials/${credentialId}`, { status });
       await loadAll();
-      setMessage("Credencial atualizada.");
+      toast.success("Credencial atualizada.");
     } catch (e) {
       setApiError("Erro ao atualizar credencial.", e);
     }
   }
 
   async function trashCredential(credentialId: number) {
-    const ok = window.confirm("Tem certeza que deseja mover esta credencial para a lixeira?");
+    const ok = await confirm("Tem certeza que deseja mover esta credencial para a lixeira?", { danger: true, confirmText: "Mover para lixeira" });
     if (!ok) return;
     await updateCredential(credentialId, "trashed");
   }
 
   async function revokeCredential(credentialId: number) {
-    const ok = window.confirm("Tem certeza que deseja revogar esta credencial?");
+    const ok = await confirm("Tem certeza que deseja revogar esta credencial?", { danger: true, confirmText: "Revogar" });
     if (!ok) return;
     await updateCredential(credentialId, "revoked");
   }
@@ -653,7 +659,7 @@ export default function OrganizationDetailsPage({
         opening_date: normalizeDateForApi(editOpeningDate),
         regime: editRegime.trim(),
       });
-      setMessage("Organização atualizada com sucesso!");
+      toast.success("Organização atualizada com sucesso!");
       setIsEditing(false);
       await loadAll();
     } catch (e) {
@@ -665,12 +671,12 @@ export default function OrganizationDetailsPage({
     e.preventDefault();
 
     if (!org) {
-      setMessage("Organização não encontrada.");
+      toast.error("Organização não encontrada.");
       return;
     }
 
     if (org.status === "trashed") {
-      setMessage("Não é possível criar lote para organização na lixeira.");
+      toast.error("Não é possível criar lote para organização na lixeira.");
       return;
     }
 
@@ -678,12 +684,12 @@ export default function OrganizationDetailsPage({
     const issueWindow = computeLotDays();
 
     if (!qty || qty <= 0) {
-      setMessage("Quantidade deve ser maior que 0.");
+      toast.error("Quantidade deve ser maior que 0.");
       return;
     }
 
     if (!issueWindow || issueWindow <= 0) {
-      setMessage("Informe uma validade maior que zero.");
+      toast.error("Informe uma validade maior que zero.");
       return;
     }
 
@@ -698,7 +704,7 @@ export default function OrganizationDetailsPage({
         end_date: lotValidityMode === "range" ? lotRangeEnd || undefined : undefined,
       });
 
-      setMessage("Lote criado com sucesso!");
+      toast.success("Lote criado com sucesso!");
       setShowCreateLot(false);
       setLotTitle("");
       setLotDescription("");
@@ -805,21 +811,6 @@ export default function OrganizationDetailsPage({
           </button>
         </div>
       </div>
-
-      {/* ── Message ── */}
-      {message && (
-        <div style={{
-          padding: "8px 12px",
-          borderRadius: 7,
-          fontSize: 13,
-          marginBottom: 10,
-          background: message.toLowerCase().includes("erro") ? "#DC262610" : "#16A34A10",
-          border: `1px solid ${message.toLowerCase().includes("erro") ? "#DC262630" : "#16A34A30"}`,
-          color: message.toLowerCase().includes("erro") ? "#DC2626" : "#16A34A",
-        }}>
-          {message}
-        </div>
-      )}
 
       {!org && <p className="error">Organização não encontrada.</p>}
 
@@ -982,104 +973,134 @@ export default function OrganizationDetailsPage({
             </div>
           </section>
 
-          {/* ── Acesso Emissor (compacto) ── */}
-          <section style={{ marginBottom: 8, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              {/* Badge */}
-              <span style={{ background: "#1A3A5C", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4, letterSpacing: "0.5px", whiteSpace: "nowrap" }}>ACESSO EMISSOR</span>
-              {issuerUser && (
-                <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 999, background: issuerUser.status === "active" ? "#dcfce7" : "#fee2e2", color: issuerUser.status === "active" ? "#166534" : "#991b1b", border: `1px solid ${issuerUser.status === "active" ? "#86efac" : "#fca5a5"}` }}>
-                  {issuerUser.status === "active" ? "● Ativo" : "● Inativo"}
-                </span>
-              )}
+          {/* ── Acesso Emissor + KPIs (2 colunas) ── */}
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 8 }}>
+
+            {/* Coluna esquerda: Card emissor */}
+            <div style={{ width: 300, flexShrink: 0, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 10, padding: "14px 16px" }}>
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ background: "#1A3A5C", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4 }}>ACESSO EMISSOR</span>
+                  {issuerUser && (
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 999,
+                      background: issuerUser.status === "active" ? "#dcfce7" : "#fee2e2",
+                      color: issuerUser.status === "active" ? "#166534" : "#991b1b",
+                      border: `1px solid ${issuerUser.status === "active" ? "#86efac" : "#fca5a5"}` }}>
+                      {issuerUser.status === "active" ? "● Ativo" : "● Inativo"}
+                    </span>
+                  )}
+                </div>
+              </div>
 
               {issuerUser ? (
                 <>
-                  <span style={{ color: "#cbd5e1", fontSize: 14 }}>|</span>
-
                   {/* LOGIN */}
-                  <span style={{ fontSize: 10, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Login</span>
-                  {editingIssuerEmail ? (
-                    <>
-                      <input type="email" value={issuerEmailDraft} onChange={(e) => setIssuerEmailDraft(e.target.value)} autoFocus
-                        style={{ fontSize: 12, padding: "3px 7px", borderRadius: 5, border: "1px solid #1A3A5C", outline: "none", width: 200 }}
-                        onKeyDown={(e) => { if (e.key === "Enter") saveIssuerEmail(); if (e.key === "Escape") setEditingIssuerEmail(false); }} />
-                      <button type="button" onClick={saveIssuerEmail} style={{ fontSize: 11, padding: "2px 8px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }}>OK</button>
-                      <button type="button" onClick={() => setEditingIssuerEmail(false)} style={{ fontSize: 11, padding: "2px 6px", background: "none", border: "1px solid #ddd", borderRadius: 4, cursor: "pointer" }}>✕</button>
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ fontSize: 12, color: "#1A3A5C", fontWeight: 600, fontFamily: "monospace" }}>
-                        {showIssuerLogin ? (issuerUser?.email || "sem email") : "••••••••••••••"}
-                      </span>
-                      <button type="button" onClick={() => setShowIssuerLogin(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, padding: "0", lineHeight: 1 }}>{showIssuerLogin ? "🙈" : "👁️"}</button>
-                      <button type="button" onClick={() => copyToClipboard(issuerUser.email, "email")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, padding: "0", lineHeight: 1 }}>{copiedField === "email" ? "✅" : "📋"}</button>
-                      <button type="button" onClick={() => { setIssuerEmailDraft(issuerUser.email); setEditingIssuerEmail(true); setEditingIssuerPassword(false); }}
-                        style={{ fontSize: 10, padding: "2px 6px", background: "#eff6ff", border: "1px solid #93c5fd", color: "#1d4ed8", borderRadius: 4, cursor: "pointer" }}>Editar</button>
-                    </>
-                  )}
-
-                  <span style={{ color: "#cbd5e1", fontSize: 14 }}>|</span>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Login</div>
+                    {editingIssuerEmail ? (
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <input type="email" value={issuerEmailDraft} onChange={(e) => setIssuerEmailDraft(e.target.value)} autoFocus
+                          style={{ flex: 1, fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid #1A3A5C", outline: "none" }}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveIssuerEmail(); if (e.key === "Escape") setEditingIssuerEmail(false); }} />
+                        <button type="button" onClick={saveIssuerEmail} style={{ fontSize: 11, padding: "0 8px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 5, cursor: "pointer" }}>OK</button>
+                        <button type="button" onClick={() => setEditingIssuerEmail(false)} style={{ fontSize: 11, padding: "0 7px", background: "none", border: "1px solid #e2e8f0", borderRadius: 5, cursor: "pointer" }}>✕</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#f8fafc", borderRadius: 6, padding: "6px 10px", border: "1px solid #e2e8f0" }}>
+                        <span style={{ fontSize: 12, color: "#1A3A5C", fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>
+                          {issuerUser?.email || "sem email"}
+                        </span>
+                        <button type="button" onClick={() => copyToClipboard(issuerUser.email, "email")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, padding: 0 }}>{copiedField === "email" ? "✅" : "📋"}</button>
+                      </div>
+                    )}
+                  </div>
 
                   {/* SENHA */}
-                  <span style={{ fontSize: 10, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Senha</span>
-                  {editingIssuerPassword ? (
-                    <>
-                      <input type="password" value={issuerPasswordDraft} onChange={(e) => setIssuerPasswordDraft(e.target.value)} autoFocus placeholder="mín. 6 chars"
-                        style={{ fontSize: 12, padding: "3px 7px", borderRadius: 5, border: "1px solid #1A3A5C", outline: "none", width: 150 }}
-                        onKeyDown={(e) => { if (e.key === "Enter") saveIssuerPassword(); if (e.key === "Escape") setEditingIssuerPassword(false); }} />
-                      <button type="button" onClick={saveIssuerPassword} style={{ fontSize: 11, padding: "2px 8px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }}>OK</button>
-                      <button type="button" onClick={() => setEditingIssuerPassword(false)} style={{ fontSize: 11, padding: "2px 6px", background: "none", border: "1px solid #ddd", borderRadius: 4, cursor: "pointer" }}>✕</button>
-                    </>
-                  ) : issuerUser.password_is_default !== false ? (
-                    <>
-                      <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "monospace", color: "#16a34a" }}>
-                        {showIssuerPassword ? "Emissor123" : "••••••••••"}
-                      </span>
-                      <button type="button" onClick={() => setShowIssuerPassword(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, padding: "0", lineHeight: 1 }}>{showIssuerPassword ? "🙈" : "👁️"}</button>
-                      <button type="button" onClick={() => copyToClipboard("Emissor123", "senha")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, padding: "0", lineHeight: 1 }}>{copiedField === "senha" ? "✅" : "📋"}</button>
-                    </>
-                  ) : (
-                    <span style={{ fontSize: 12, fontFamily: "monospace", color: "#92400e", background: "#fef9ec", border: "1px solid #fcd34d", borderRadius: 4, padding: "1px 6px" }}>••••••••</span>
-                  )}
-                  {!editingIssuerPassword && (
-                    <button type="button" onClick={() => { setIssuerPasswordDraft(""); setEditingIssuerPassword(true); setEditingIssuerEmail(false); }}
-                      style={{ fontSize: 10, padding: "2px 6px", background: "#eff6ff", border: "1px solid #93c5fd", color: "#1d4ed8", borderRadius: 4, cursor: "pointer" }}>Editar Senha</button>
-                  )}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Senha</div>
+                    {editingIssuerPassword ? (
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <input type="password" value={issuerPasswordDraft} onChange={(e) => setIssuerPasswordDraft(e.target.value)} autoFocus placeholder="mín. 6 chars"
+                          style={{ flex: 1, fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "1px solid #1A3A5C", outline: "none" }}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveIssuerPassword(); if (e.key === "Escape") setEditingIssuerPassword(false); }} />
+                        <button type="button" onClick={saveIssuerPassword} style={{ fontSize: 11, padding: "0 8px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 5, cursor: "pointer" }}>OK</button>
+                        <button type="button" onClick={() => setEditingIssuerPassword(false)} style={{ fontSize: 11, padding: "0 7px", background: "none", border: "1px solid #e2e8f0", borderRadius: 5, cursor: "pointer" }}>✕</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, background: issuerUser.password_is_default !== false ? "#f0fdf4" : "#fef9ec", borderRadius: 6, padding: "6px 10px", border: `1px solid ${issuerUser.password_is_default !== false ? "#86efac" : "#fcd34d"}` }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, flex: 1, fontFamily: "monospace", color: issuerUser.password_is_default !== false ? "#16a34a" : "#92400e", letterSpacing: showIssuerPassword ? "0.5px" : "3px" }}>
+                          {issuerUser.password_is_default !== false ? (showIssuerPassword ? "Emissor123" : "••••••••••") : "••••••••"}
+                        </span>
+                        {issuerUser.password_is_default !== false && (
+                          <button type="button" onClick={() => setShowIssuerPassword(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: 0 }}>{showIssuerPassword ? "🙈" : "👁️"}</button>
+                        )}
+                        {issuerUser.password_is_default !== false && (
+                          <button type="button" onClick={() => copyToClipboard("Emissor123", "senha")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, padding: 0 }}>{copiedField === "senha" ? "✅" : "📋"}</button>
+                        )}
+                        {issuerUser.password_is_default === false && (
+                          <span style={{ fontSize: 10, color: "#92400e", fontWeight: 600 }}>personalizada</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
 
-                  <span style={{ color: "#cbd5e1", fontSize: 14 }}>|</span>
+                  {/* Botões de ação */}
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
+                    {!editingIssuerEmail && !editingIssuerPassword && (
+                      <>
+                        <button type="button" onClick={() => { setIssuerEmailDraft(issuerUser.email); setEditingIssuerEmail(true); setEditingIssuerPassword(false); }}
+                          style={{ fontSize: 11, padding: "4px 10px", background: "#eff6ff", border: "1px solid #93c5fd", color: "#1d4ed8", borderRadius: 5, cursor: "pointer", fontWeight: 500 }}>
+                          ✏️ Editar Login
+                        </button>
+                        <button type="button" onClick={() => { setIssuerPasswordDraft(""); setEditingIssuerPassword(true); setEditingIssuerEmail(false); }}
+                          style={{ fontSize: 11, padding: "4px 10px", background: "#eff6ff", border: "1px solid #93c5fd", color: "#1d4ed8", borderRadius: 5, cursor: "pointer", fontWeight: 500 }}>
+                          🔑 Editar Senha
+                        </button>
+                      </>
+                    )}
+                  </div>
 
-                  <button type="button" onClick={() => copyToClipboard(`Login: ${issuerUser.email}\nSenha: ${issuerUser.password_is_default !== false ? "Emissor123" : "(personalizada)"}`, "ambos")}
-                    style={{ fontSize: 10, padding: "2px 8px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", whiteSpace: "nowrap" }}>
-                    {copiedField === "ambos" ? "✅ Copiado!" : "📋 Copiar tudo"}
-                  </button>
-                  <button type="button" onClick={resetIssuerPassword}
-                    style={{ fontSize: 10, padding: "2px 8px", background: "none", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 4, cursor: "pointer", whiteSpace: "nowrap", marginLeft: "auto" }}>
-                    Redefinir para Emissor123
-                  </button>
+                  <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                    <button type="button"
+                      onClick={() => copyToClipboard(`Login: ${issuerUser.email}\nSenha: ${issuerUser.password_is_default !== false ? "Emissor123" : "(personalizada)"}\nAcesse: https://app.badgeone.com.br/login`, "ambos")}
+                      style={{ flex: 1, fontSize: 11, padding: "5px 8px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {copiedField === "ambos" ? "✅ Copiado!" : "📋 Copiar credenciais"}
+                    </button>
+                    <button type="button" onClick={resetIssuerPassword}
+                      style={{ fontSize: 11, padding: "5px 8px", background: "none", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 6, cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" }}>
+                      Redefinir senha
+                    </button>
+                  </div>
+
+                  <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 8, lineHeight: 1.4 }}>
+                    {issuerUser.password_is_default !== false ? "Senha padrão · emissor pode alterar no primeiro acesso" : "Emissor definiu senha própria"}
+                  </div>
                 </>
               ) : (
-                <>
-                  <span style={{ fontSize: 12, color: "#64748b" }}>Nenhum emissor vinculado.</span>
+                <div style={{ textAlign: "center", padding: "16px 0" }}>
+                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>Nenhum emissor vinculado.</div>
                   <button type="button" onClick={createIssuer}
-                    style={{ fontSize: 11, padding: "3px 10px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 5, cursor: "pointer" }}>
+                    style={{ fontSize: 12, padding: "6px 14px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>
                     + Criar emissor padrão
                   </button>
-                </>
+                </div>
               )}
             </div>
-          </section>
 
-          {/* ── KPIs ── */}
-          <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 8, fontSize: 12 }}>
-            <span style={{ color: "#64748b" }}>Lotes:</span>
-            <strong style={{ color: "#1A3A5C" }}>{lots.length}</strong>
-            <span style={{ color: "#cbd5e1" }}>·</span>
-            <span style={{ color: "#64748b" }}>Emitidos:</span>
-            <strong style={{ color: "#1A3A5C" }}>{totalIssued}</strong>
-            <span style={{ color: "#cbd5e1" }}>·</span>
-            <span style={{ color: "#64748b" }}>Saldo:</span>
-            <strong style={{ color: "#16a34a" }}>{totalRemaining}</strong>
+            {/* Coluna direita: KPIs */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+              {[
+                { label: "Lotes", value: lots.length, color: "#1A3A5C", bg: "#eff6ff", border: "#bfdbfe" },
+                { label: "Emitidos", value: totalIssued, color: "#1A3A5C", bg: "#f0fdf4", border: "#bbf7d0" },
+                { label: "Saldo", value: totalRemaining, color: "#16a34a", bg: "#f0fdf4", border: "#86efac" },
+              ].map(k => (
+                <div key={k.label} style={{ background: k.bg, border: `1px solid ${k.border}`, borderRadius: 8, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{k.label}</span>
+                  <span style={{ fontSize: 20, fontWeight: 700, color: k.color }}>{k.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* ── Espelho Operacional ── */}
@@ -1204,7 +1225,14 @@ export default function OrganizationDetailsPage({
                         </td>
                         <td style={{ padding: "5px 8px", textAlign: "right", color: "#374151" }}>{l.total_badges}</td>
                         <td style={{ padding: "5px 8px", textAlign: "right", color: "#374151" }}>{l.issued}</td>
-                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: (l.remaining ?? 0) > 0 ? "#16a34a" : "#dc2626" }}>{l.remaining ?? 0}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right" }}>
+                          <span style={{ fontWeight: 700, color: (l.remaining ?? 0) > 0 ? "#16a34a" : "#dc2626" }}>{l.remaining ?? 0}</span>
+                          {l.total_badges > 0 && (
+                            <div className="lot-progress-wrap" style={{ width: 50, marginLeft: "auto" }}>
+                              <div className="lot-progress-fill" style={{ width: `${Math.round(((l.remaining ?? 0) / l.total_badges) * 100)}%`, background: (l.remaining ?? 0) / l.total_badges > 0.3 ? "#16a34a" : "#f59e0b" }} />
+                            </div>
+                          )}
+                        </td>
                         <td style={{ padding: "5px 8px", color: "#64748b", whiteSpace: "nowrap" }}>{l.issue_window_days ? `${l.issue_window_days}d` : "—"}</td>
                         <td style={{ padding: "5px 8px", color: "#64748b", whiteSpace: "nowrap", fontSize: 11 }}>
                           {l.start_date || l.end_date ? `${l.start_date ? formatDateBR(l.start_date) : "?"} → ${l.end_date ? formatDateBR(l.end_date) : "∞"}` : "—"}

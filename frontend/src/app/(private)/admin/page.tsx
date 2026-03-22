@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiGet } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth-context";
+import { useToast } from "../../../lib/toast-context";
 
 type OnboardingStatus = {
   has_organization: boolean;
@@ -34,6 +35,7 @@ type Credential = { id: number; organization_id?: number; lot_id?: number; statu
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const toast = useToast();
 
   const [onboarding, setOnboarding] = useState<OnboardingStatus | null>(null);
   const [orgs, setOrgs] = useState<Org[]>([]);
@@ -41,11 +43,9 @@ export default function AdminDashboard() {
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [message, setMessage] = useState("");
 
   async function loadData() {
     setRefreshing(true);
-    setMessage("");
     try {
       const [oRes, lRes, obRes, cRes] = await Promise.allSettled([
         apiGet("/api/v1/organizations"),
@@ -62,7 +62,7 @@ export default function AdminDashboard() {
       if (cRes.status === "fulfilled") setCredentials((cRes.value as Credential[]) || []);
       else setCredentials([]);
     } catch {
-      setMessage("Erro ao carregar dados.");
+      toast.error("Erro ao carregar dados.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -130,10 +130,6 @@ export default function AdminDashboard() {
           Atualizar
         </button>
       </header>
-
-      {message && (
-        <div style={styles.errorBanner}>{message}</div>
-      )}
 
       {/* ── KPI Cards ── */}
       <section style={styles.kpiGrid}>

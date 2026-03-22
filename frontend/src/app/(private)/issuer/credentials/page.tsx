@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiGet } from "../../../../lib/api";
+import { useToast } from "../../../../lib/toast-context";
 
 type Cred = {
   id: number;
@@ -45,11 +46,11 @@ function formatDate(iso?: string) {
 }
 
 export default function CredentialsPage() {
+  const toast = useToast();
   const [creds, setCreds] = useState<Cred[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [rectify, setRectify] = useState<RectifyState | null>(null);
-  const [successMsg, setSuccessMsg] = useState("");
 
   async function load() {
     const data = await apiGet("/api/v1/credentials");
@@ -94,8 +95,7 @@ export default function CredentialsPage() {
         throw new Error(d.detail || "Erro");
       }
       setRectify(null);
-      setSuccessMsg("Retificação registrada com sucesso.");
-      setTimeout(() => setSuccessMsg(""), 4000);
+      toast.success("Retificação registrada com sucesso.");
       await load();
     } catch (e: any) {
       setRectify({ ...rectify, loading: false, error: e.message || "Erro ao retificar." });
@@ -123,12 +123,6 @@ export default function CredentialsPage() {
           + Emitir certificação
         </Link>
       </div>
-
-      {successMsg && (
-        <div style={{ marginBottom: 16, padding: "10px 14px", background: "#dcfce7", border: "1px solid #86efac", borderRadius: 8, fontSize: 13, color: "#166534" }}>
-          {successMsg}
-        </div>
-      )}
 
       {loading ? (
         <p style={{ color: "var(--text-secondary, #888)", fontSize: 13 }}>Carregando...</p>

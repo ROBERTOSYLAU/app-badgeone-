@@ -4,19 +4,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiGet, apiPost } from "../../../../lib/api";
 import { useAuth } from "../../../../lib/auth-context";
+import { useToast } from "../../../../lib/toast-context";
 
 type Lot = { id: number; title?: string; organization_id: number; total_badges: number; remaining: number; status: string };
 
 export default function EmitPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const toast = useToast();
   const [lots, setLots] = useState<Lot[]>([]);
   const [lotId, setLotId] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [recipientCpf, setRecipientCpf] = useState("");
   const [courseName, setCourseName] = useState("");
-  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -30,9 +31,8 @@ export default function EmitPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setResult(null);
     if (!lotId || !recipientName.trim() || !courseName.trim()) {
-      setResult({ ok: false, msg: "Preencha lote, nome e certificação." });
+      toast.error("Preencha lote, nome e certificação.");
       return;
     }
     setLoading(true);
@@ -45,7 +45,7 @@ export default function EmitPage() {
         recipient_cpf: recipientCpf.trim() || null,
         course_name: courseName.trim(),
       });
-      setResult({ ok: true, msg: `Certificação emitida com sucesso! ID: ${data.public_id}` });
+      toast.success(`Certificação emitida com sucesso! ID: ${data.public_id}`);
       setLotId("");
       setRecipientName("");
       setRecipientEmail("");
@@ -56,7 +56,7 @@ export default function EmitPage() {
         setLots(d.filter((l: Lot) => l.organization_id === user?.organization_id && l.status === "active" && l.remaining > 0));
       });
     } catch {
-      setResult({ ok: false, msg: "Erro ao emitir. Verifique o saldo do lote." });
+      toast.error("Erro ao emitir. Verifique o saldo do lote.");
     } finally {
       setLoading(false);
     }
@@ -186,21 +186,6 @@ export default function EmitPage() {
         </button>
       </form>
 
-      {result && (
-        <div
-          style={{
-            marginTop: 16,
-            padding: "12px 16px",
-            borderRadius: 8,
-            fontSize: 13,
-            background: result.ok ? "#dcfce7" : "#fee2e2",
-            border: `1px solid ${result.ok ? "#86efac" : "#fca5a5"}`,
-            color: result.ok ? "#166534" : "#991b1b",
-          }}
-        >
-          {result.msg}
-        </div>
-      )}
     </div>
   );
 }

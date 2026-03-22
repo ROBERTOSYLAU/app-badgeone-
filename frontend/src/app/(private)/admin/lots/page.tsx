@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { apiGet, apiPost } from "../../../../lib/api";
 import { useAuth } from "../../../../lib/auth-context";
 import { logAction } from "../../../../lib/history";
+import { useToast } from "../../../../lib/toast-context";
 
 type Lot = {
   id: number;
@@ -45,6 +46,7 @@ function statusColor(s: string) {
 export default function AdminLotsPage() {
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const toast = useToast();
 
   const [lots, setLots] = useState<Lot[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
@@ -52,7 +54,6 @@ export default function AdminLotsPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [showForm, setShowForm] = useState(false);
-  const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Create lot form
@@ -100,11 +101,10 @@ export default function AdminLotsPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    setMessage("");
-    if (!selOrgId) { setMessage("Selecione uma organização."); return; }
+    if (!selOrgId) { toast.error("Selecione uma organização."); return; }
     const days = computeDays();
-    if (!parseInt(newQty) || parseInt(newQty) <= 0) { setMessage("Quantidade deve ser maior que 0."); return; }
-    if (!days || days <= 0) { setMessage("Informe uma validade maior que zero."); return; }
+    if (!parseInt(newQty) || parseInt(newQty) <= 0) { toast.error("Quantidade deve ser maior que 0."); return; }
+    if (!days || days <= 0) { toast.error("Informe uma validade maior que zero."); return; }
     setSaving(true);
     try {
       await apiPost("/api/v1/lots", {
@@ -117,13 +117,13 @@ export default function AdminLotsPage() {
         end_date: validityMode === "range" ? newRangeEnd || undefined : undefined,
       });
       logAction("Lote criado", `Org #${selOrgId} · ${newTitle || "Sem título"}`);
-      setMessage("Lote criado com sucesso!");
+      toast.success("Lote criado com sucesso!");
       setShowForm(false);
       setSelOrgId(""); setNewTitle(""); setNewDesc(""); setNewQty("");
       setNewDays("365"); setNewMonths(""); setNewRangeStart(""); setNewRangeEnd("");
       await loadAll();
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Erro ao criar lote.");
+      toast.error(err instanceof Error ? err.message : "Erro ao criar lote.");
     } finally {
       setSaving(false);
     }
@@ -162,23 +162,12 @@ export default function AdminLotsPage() {
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => { setShowForm((v) => !v); setMessage(""); }} style={{ ...btn, ...(showForm ? { background: "var(--primary)", color: "#fff", borderColor: "var(--primary)" } : {}) }}>
+          <button onClick={() => { setShowForm((v) => !v); }} style={{ ...btn, ...(showForm ? { background: "var(--primary)", color: "#fff", borderColor: "var(--primary)" } : {}) }}>
             {showForm ? "Cancelar" : "+ Criar Lote"}
           </button>
           <button onClick={loadAll} style={btn}>Atualizar</button>
         </div>
       </div>
-
-      {message && (
-        <div style={{
-          padding: "10px 14px", borderRadius: 8, fontSize: 13, marginBottom: 14,
-          background: message.includes("sucesso") ? "rgba(22,163,74,0.08)" : "rgba(220,38,38,0.08)",
-          border: `1px solid ${message.includes("sucesso") ? "rgba(22,163,74,0.3)" : "rgba(220,38,38,0.3)"}`,
-          color: message.includes("sucesso") ? "var(--success)" : "var(--danger)",
-        }}>
-          {message}
-        </div>
-      )}
 
       {/* Create lot form */}
       {showForm && (
@@ -279,7 +268,7 @@ export default function AdminLotsPage() {
               }}>
                 {saving ? "Criando..." : "Criar Lote"}
               </button>
-              <button type="button" onClick={() => { setShowForm(false); setMessage(""); }} style={btn}>Cancelar</button>
+              <button type="button" onClick={() => { setShowForm(false); }} style={btn}>Cancelar</button>
             </div>
           </form>
         </div>

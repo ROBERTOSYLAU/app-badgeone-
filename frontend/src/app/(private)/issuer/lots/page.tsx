@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { apiGet } from "../../../../lib/api";
 import { useAuth } from "../../../../lib/auth-context";
+import { useToast } from "../../../../lib/toast-context";
+import { useConfirm } from "../../../../lib/confirm-modal";
 
 type Lot = {
   id: number;
@@ -29,12 +31,13 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function IssuerLotsPage() {
   const { user } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [lots, setLots] = useState<Lot[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<{ id: number; ok: boolean; text: string } | null>(null);
 
   async function load() {
     const data = await apiGet("/api/v1/lots");
@@ -66,19 +69,21 @@ export default function IssuerLotsPage() {
         body: JSON.stringify({ display_title: editValue.trim() }),
       });
       if (!res.ok) throw new Error();
-      setMsg({ id: lot.id, ok: true, text: "Nome atualizado" });
+      toast.success("Nome atualizado");
       setEditingId(null);
       await load();
     } catch {
-      setMsg({ id: lot.id, ok: false, text: "Erro ao renomear" });
+      toast.error("Erro ao renomear");
     } finally {
       setSaving(false);
-      setTimeout(() => setMsg(null), 3000);
     }
   }
 
   async function setStatus(lot: Lot, status: string) {
-    if (status === "revoked" && !confirm(`Revogar o lote "${displayName(lot)}"?\nEsta ação é irreversível.`)) return;
+    if (status === "revoked") {
+      const ok = await confirm(`Revogar o lote "${displayName(lot)}"? Esta ação é irreversível.`, { danger: true, confirmText: "Revogar" });
+      if (!ok) return;
+    }
     try {
       const res = await fetch(`/api/v1/lots/${lot.id}/set-status`, {
         method: "PATCH",
@@ -87,12 +92,10 @@ export default function IssuerLotsPage() {
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error();
-      setMsg({ id: lot.id, ok: true, text: `Lote ${STATUS_LABELS[status] || status}` });
+      toast.success(`Lote ${STATUS_LABELS[status] || status}`);
       await load();
     } catch {
-      setMsg({ id: lot.id, ok: false, text: "Erro ao alterar status" });
-    } finally {
-      setTimeout(() => setMsg(null), 3000);
+      toast.error("Erro ao alterar status");
     }
   }
 
@@ -127,7 +130,6 @@ export default function IssuerLotsPage() {
             const root = rootName(lot);
             const pct = saldoPercent(lot);
             const isEditing = editingId === lot.id;
-            const lotMsg = msg?.id === lot.id ? msg : null;
 
             return (
               <div
@@ -230,17 +232,6 @@ export default function IssuerLotsPage() {
                   </div>
                 </div>
 
-                {/* Feedback message */}
-                {lotMsg && (
-                  <div style={{
-                    marginTop: 10, fontSize: 12, padding: "6px 12px", borderRadius: 6,
-                    background: lotMsg.ok ? "#dcfce7" : "#fee2e2",
-                    color: lotMsg.ok ? "#166534" : "#991b1b",
-                    border: `1px solid ${lotMsg.ok ? "#86efac" : "#fca5a5"}`,
-                  }}>
-                    {lotMsg.text}
-                  </div>
-                )}
               </div>
             );
           })}

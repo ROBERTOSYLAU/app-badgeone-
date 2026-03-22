@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiGet, apiPost } from "../../../../lib/api";
 import { useAuth } from "../../../../lib/auth-context";
+import { useToast } from "../../../../lib/toast-context";
 
 type User = {
   id: number;
@@ -23,10 +24,10 @@ type Organization = {
 export default function AdminUsersPage() {
   const router = useRouter();
   const { user: currentUser } = useAuth();
+  const toast = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
   
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -45,7 +46,7 @@ export default function AdminUsersPage() {
       setUsers(u.filter((x: User) => x.role === "issuer"));
       setOrgs(o.filter((x: Organization) => x.status === "active"));
     } catch {
-      setMessage("Erro ao carregar dados.");
+      toast.error("Erro ao carregar dados.");
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,6 @@ export default function AdminUsersPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormLoading(true);
-    setMessage("");
 
     try {
       await apiPost("/api/v1/users", {
@@ -69,7 +69,7 @@ export default function AdminUsersPage() {
         organization_id: Number(orgId),
         status: "active",
       });
-      setMessage("Usuário emissor criado com sucesso!");
+      toast.success("Usuário emissor criado com sucesso!");
       setName("");
       setEmail("");
       setPassword("");
@@ -77,7 +77,7 @@ export default function AdminUsersPage() {
       setShowForm(false);
       await loadData();
     } catch (err: any) {
-      setMessage(err.message || "Erro ao criar usuário.");
+      toast.error(err.message || "Erro ao criar usuário.");
     } finally {
       setFormLoading(false);
     }
@@ -106,12 +106,6 @@ export default function AdminUsersPage() {
           {showForm ? "Cancelar" : "+ Novo Emissor"}
         </button>
       </div>
-
-      {message && (
-        <p className={message.includes("Erro") ? "error" : "success"}>
-          {message}
-        </p>
-      )}
 
       {showForm && (
         <section className="card">

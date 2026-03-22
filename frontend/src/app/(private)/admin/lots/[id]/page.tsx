@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../../../../../lib/api";
 import { logAction } from "../../../../../lib/history";
+import { useToast } from "../../../../../lib/toast-context";
+import { useConfirm } from "../../../../../lib/confirm-modal";
 
 type Lot = {
   id: number;
@@ -58,6 +60,8 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
   const lotId = Number(params.id);
   const editRef = useRef<HTMLDivElement>(null);
   const noteRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const [lot, setLot] = useState<Lot | null>(null);
   const [org, setOrg] = useState<Org | null>(null);
@@ -65,7 +69,6 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"info" | "notes">("info");
   const [editing, setEditing] = useState(false);
-  const [msg, setMsg] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Edit fields
@@ -136,7 +139,7 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
   async function handleSave(ev: React.FormEvent) {
     ev.preventDefault();
     if (!lot) return;
-    setSaving(true); setMsg("");
+    setSaving(true);
     const days = calcDays(vMode, eDays, eMonths, eStart, eEnd);
     try {
       await apiPatch(`/api/v1/lots/${lot.id}`, {
@@ -148,34 +151,35 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
         end_date: vMode === "range" ? eEnd || null : null,
       });
       logAction("Lote editado", `ID ${lot.id} · ${eTitle || `Lote ${lot.id}`}`);
-      setMsg("Lote atualizado com sucesso.");
+      toast.success("Lote atualizado com sucesso.");
       setEditing(false);
       await loadAll();
     } catch (err) {
-      setMsg(err instanceof Error ? err.message : "Erro ao salvar.");
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar.");
     } finally { setSaving(false); }
   }
 
   async function handleAddNote(ev: React.FormEvent) {
     ev.preventDefault();
     if (!nContent.trim()) return;
-    setSaving(true); setMsg("");
+    setSaving(true);
     try {
       await apiPost(`/api/v1/lot-notes/${lotId}`, { title: nTitle.trim() || undefined, content: nContent.trim() });
       setNTitle(""); setNContent("");
-      setMsg("Anotação salva.");
+      toast.success("Anotação salva.");
       await loadAll();
     } catch (err) {
-      setMsg(err instanceof Error ? err.message : "Erro ao salvar anotação.");
+      toast.error(err instanceof Error ? err.message : "Erro ao salvar anotação.");
     } finally { setSaving(false); }
   }
 
   async function handleDeleteNote(noteId: number) {
-    if (!confirm("Remover esta anotação?")) return;
+    const ok = await confirm("Remover esta anotação?", { danger: true, confirmText: "Remover" });
+    if (!ok) return;
     try {
       await apiDelete(`/api/v1/lot-notes/${noteId}`);
       await loadAll();
-    } catch { setMsg("Erro ao remover anotação."); }
+    } catch { toast.error("Erro ao remover anotação."); }
   }
 
   function openEdit() {
@@ -226,15 +230,6 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
 
         <div />
       </div>
-
-      {msg && (
-        <div style={{
-          padding: "9px 14px", borderRadius: 8, fontSize: 13, marginBottom: 14,
-          background: msg.includes("sucesso") || msg.includes("salva") ? "rgba(22,163,74,0.08)" : "rgba(220,38,38,0.08)",
-          border: `1px solid ${msg.includes("sucesso") || msg.includes("salva") ? "rgba(22,163,74,0.3)" : "rgba(220,38,38,0.3)"}`,
-          color: msg.includes("sucesso") || msg.includes("salva") ? "var(--success)" : "var(--danger)",
-        }}>{msg}</div>
-      )}
 
       {/* ── KPI Cards — todos clicáveis → abrem edição ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10, marginBottom: 14 }}>
@@ -474,7 +469,7 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
               }}>
                 {saving ? "Salvando..." : "Salvar alterações"}
               </button>
-              <button type="button" onClick={() => { setEditing(false); setMsg(""); }} style={btnGhost}>Cancelar</button>
+              <button type="button" onClick={() => { setEditing(false); }} style={btnGhost}>Cancelar</button>
             </div>
           </form>
         </div>
