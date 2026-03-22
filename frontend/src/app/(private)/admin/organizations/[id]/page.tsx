@@ -265,18 +265,39 @@ export default function OrganizationDetailsPage({
       setCredentials([]);
     }
 
+    // Carrega emissor — tenta via lista de usuários primeiro, depois ensure-issuer
+    let foundIssuer: IssuerUser | null = null;
+
     if (usersRes.status === "fulfilled") {
-      const issuer = ((usersRes.value as IssuerUser[]) || []).find((u) => u.role === "issuer") || null;
-      if (issuer) {
-        setIssuerUser(issuer);
-      } else {
-        // Auto-provisiona emissor padrão se não existir
-        try {
-          const created = await apiPost(`/api/v1/organizations/${orgId}/ensure-issuer`, {}) as IssuerUser & { password_is_default: boolean };
-          setIssuerUser({ id: created.id, name: "", email: created.email, status: "active", role: "issuer", password_is_default: created.password_is_default });
-        } catch {
-          setIssuerUser(null);
-        }
+      const allUsers = (usersRes.value as any[]) || [];
+      console.log("[DEBUG] users API response:", allUsers);
+      foundIssuer = allUsers.find((u: any) => u.role === "issuer") || null;
+      console.log("[DEBUG] issuer encontrado na lista:", foundIssuer);
+    } else {
+      console.warn("[DEBUG] users API falhou:", (usersRes as any).reason);
+    }
+
+    if (foundIssuer) {
+      console.log("[DEBUG] setIssuerUser from list:", foundIssuer);
+      setIssuerUser(foundIssuer);
+    } else {
+      // Auto-provisiona emissor padrão se não existir ou se API falhou
+      try {
+        const created = await apiPost(`/api/v1/organizations/${orgId}/ensure-issuer`, {}) as any;
+        console.log("[DEBUG] ensure-issuer response:", created);
+        const provisioned: IssuerUser = {
+          id: created.id,
+          name: created.name || "",
+          email: created.email || "",
+          status: created.status || "active",
+          role: "issuer",
+          password_is_default: created.password_is_default ?? true,
+        };
+        console.log("[DEBUG] setIssuerUser from ensure-issuer:", provisioned);
+        setIssuerUser(provisioned);
+      } catch (err) {
+        console.error("[DEBUG] ensure-issuer falhou:", err);
+        setIssuerUser(null);
       }
     }
   }
@@ -999,6 +1020,8 @@ export default function OrganizationDetailsPage({
 
             {issuerUser ? (
               <>
+                {/* DEBUG — remover após confirmar */}
+                {console.log("[DEBUG] render issuerUser:", issuerUser) as any}
                 {/* Grade: LOGIN | SENHA | COPIAR */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 12, alignItems: "start" }}>
 
@@ -1036,9 +1059,12 @@ export default function OrganizationDetailsPage({
                         </div>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--bg-soft)", borderRadius: 7, padding: "9px 10px", border: "1px solid var(--line)", minHeight: 38 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--bg-soft)", borderRadius: 7, padding: "9px 10px", border: "1px solid var(--line)", minHeight: 38 }}
+                        title={`email: "${issuerUser.email}" | show: ${showIssuerLogin}`}>
                         <code style={{ fontSize: 13, color: "var(--primary)", fontWeight: 700, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {showIssuerLogin ? (issuerUser.email || "—") : "••••••••••••••••••"}
+                          {showIssuerLogin
+                            ? (issuerUser.email ? String(issuerUser.email) : "⚠ email não carregado")
+                            : "••••••••••••••••••"}
                         </code>
                         <button onClick={() => setShowIssuerLogin((v) => !v)}
                           title={showIssuerLogin ? "Ocultar login" : "Mostrar login"}
