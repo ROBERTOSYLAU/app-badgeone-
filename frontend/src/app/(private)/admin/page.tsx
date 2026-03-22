@@ -194,8 +194,8 @@ export default function AdminDashboard() {
               onClick={() => router.push("/admin/emissions")}
             />
             <ActionBtn
-              label="Auditoria"
-              description="Logs do sistema"
+              label="Histórico"
+              description="Logs de ações"
               icon={<AuditIcon size={20} />}
               onClick={() => router.push("/admin/audit")}
             />
@@ -304,9 +304,9 @@ function ActionBtn({ label, description, icon, onClick }: {
 function StatusRow({ label, done }: { label: string; done: boolean }) {
   return (
     <div style={styles.statusRow}>
-      <span style={{ ...styles.statusDot, backgroundColor: done ? "#16A34A" : "#D1D5DB" }} />
-      <span style={{ ...styles.statusText, color: done ? "#1A1A1A" : "#9CA3AF" }}>{label}</span>
-      <span style={{ ...styles.statusBadge, backgroundColor: done ? "#16A34A14" : "#F0F0F0", color: done ? "#16A34A" : "#9CA3AF" }}>
+      <span style={{ ...styles.statusDot, backgroundColor: done ? "var(--success)" : "var(--line)" }} />
+      <span style={{ ...styles.statusText, color: done ? "var(--text)" : "var(--muted)" }}>{label}</span>
+      <span style={{ ...styles.statusBadge, backgroundColor: done ? "rgba(22,163,74,0.08)" : "var(--line)", color: done ? "var(--success)" : "var(--muted)" }}>
         {done ? "Concluído" : "Pendente"}
       </span>
     </div>
@@ -317,9 +317,9 @@ function SummaryRow({ label, value, active }: { label: string; value: number; ac
   return (
     <tr>
       <td style={styles.td}>{label}</td>
-      <td style={{ ...styles.td, fontWeight: 600, color: "#1A1A1A" }}>{value}</td>
+      <td style={{ ...styles.td, fontWeight: 600, color: "var(--text)" }}>{value}</td>
       <td style={styles.td}>
-        <span style={{ ...styles.pill, backgroundColor: active ? "#16A34A14" : "#F0F0F0", color: active ? "#16A34A" : "#9CA3AF" }}>
+        <span style={{ ...styles.pill, backgroundColor: active ? "rgba(22,163,74,0.08)" : "var(--line)", color: active ? "var(--success)" : "var(--muted)" }}>
           {active ? "Ativo" : "Vazio"}
         </span>
       </td>
@@ -348,10 +348,10 @@ function CheckIcon({ size = 18, color = "currentColor" }: { size?: number; color
 const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100vh",
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "var(--bg-soft)",
     padding: "16px 20px",
     fontFamily: "'Inter', system-ui, sans-serif",
-    color: "#1A1A1A",
+    color: "var(--text)",
   },
   loadingWrap: {
     display: "flex",
@@ -364,12 +364,12 @@ const styles: Record<string, React.CSSProperties> = {
   loadingSpinner: {
     width: 32,
     height: 32,
-    border: "3px solid #E8E8E8",
-    borderTop: "3px solid #5B2D8E",
+    border: "3px solid var(--line)",
+    borderTop: "3px solid var(--primary)",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
   },
-  loadingText: { color: "#6B7280", fontSize: 13 },
+  loadingText: { color: "var(--muted)", fontSize: 13 },
   header: {
     display: "flex",
     alignItems: "flex-start",
@@ -381,13 +381,13 @@ const styles: Record<string, React.CSSProperties> = {
   pageTitle: {
     fontSize: 20,
     fontWeight: 700,
-    color: "#5B2D8E",
+    color: "var(--primary)",
     margin: 0,
     letterSpacing: "-0.5px",
   },
   pageSubtitle: {
     fontSize: 13,
-    color: "#6B7280",
+    color: "var(--muted)",
     margin: "4px 0 0",
     textTransform: "capitalize",
   },
@@ -398,9 +398,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "7px 14px",
     fontSize: 12,
     fontWeight: 500,
-    color: "#6B7280",
-    backgroundColor: "#fff",
-    border: "1px solid #E8E8E8",
+    color: "var(--muted)",
+    backgroundColor: "var(--card)",
+    border: "1px solid var(--line)",
     borderRadius: 7,
     cursor: "pointer",
     transition: "all 0.15s",
@@ -410,15 +410,15 @@ const styles: Record<string, React.CSSProperties> = {
     display: "inline-block",
     width: 11,
     height: 11,
-    border: "2px solid #E8E8E8",
-    borderTop: "2px solid #5B2D8E",
+    border: "2px solid var(--line)",
+    borderTop: "2px solid var(--primary)",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
   },
   errorBanner: {
-    backgroundColor: "#DC262610",
-    border: "1px solid #DC262630",
-    color: "#DC2626",
+    backgroundColor: "rgba(220,38,38,0.08)",
+    border: "1px solid rgba(220,38,38,0.3)",
+    color: "var(--danger)",
     borderRadius: 7,
     padding: "10px 14px",
     fontSize: 13,
@@ -431,8 +431,8 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 12,
   },
   kpiCard: {
-    backgroundColor: "#FFFFFF",
-    border: "1px solid #E8E8E8",
+    backgroundColor: "var(--card)",
+    border: "1px solid var(--line)",
     borderRadius: 8,
     padding: "12px 14px",
     textAlign: "left",
@@ -451,9 +451,9 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: "center",
     marginBottom: 2,
   },
-  kpiValue: { fontSize: 22, fontWeight: 700, color: "#1A1A1A", lineHeight: 1 },
-  kpiLabel: { fontSize: 12, color: "#6B7280", fontWeight: 500 },
-  kpiHint: { fontSize: 11, color: "#5B2D8E", marginTop: 2 },
+  kpiValue: { fontSize: 22, fontWeight: 700, color: "var(--text)", lineHeight: 1 },
+  kpiLabel: { fontSize: 12, color: "var(--muted)", fontWeight: 500 },
+  kpiHint: { fontSize: 11, color: "var(--primary)", marginTop: 2 },
   twoCol: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
@@ -461,8 +461,8 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 12,
   },
   card: {
-    backgroundColor: "#FFFFFF",
-    border: "1px solid #E8E8E8",
+    backgroundColor: "var(--card)",
+    border: "1px solid var(--line)",
     borderRadius: 8,
     padding: "12px 14px",
     marginBottom: 0,
@@ -471,10 +471,10 @@ const styles: Record<string, React.CSSProperties> = {
   cardTitle: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#1A1A1A",
+    color: "var(--text)",
     margin: "0 0 12px",
     paddingBottom: 10,
-    borderBottom: "1px solid #E8E8E8",
+    borderBottom: "1px solid var(--line)",
   },
   actionGrid: {
     display: "flex",
@@ -487,7 +487,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     padding: "10px 12px",
     backgroundColor: "transparent",
-    border: "1px solid #E8E8E8",
+    border: "1px solid var(--line)",
     borderRadius: 6,
     cursor: "pointer",
     transition: "all 0.15s",
@@ -503,16 +503,16 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#5B2D8E",
+    color: "var(--primary)",
     flexShrink: 0,
   },
-  actionLabel: { fontSize: 13, fontWeight: 500, color: "#1A1A1A" },
-  actionDesc: { fontSize: 11, color: "#6B7280", marginTop: 1 },
+  actionLabel: { fontSize: 13, fontWeight: 500, color: "var(--text)" },
+  actionDesc: { fontSize: 11, color: "var(--muted)", marginTop: 1 },
   progressWrap: { marginBottom: 16 },
   progressHeader: { display: "flex", justifyContent: "space-between", marginBottom: 6 },
-  progressLabel: { fontSize: 12, color: "#6B7280" },
-  progressValue: { fontSize: 12, fontWeight: 600, color: "#1A1A1A" },
-  progressBar: { height: 5, backgroundColor: "#F0F0F0", borderRadius: 99, overflow: "hidden" },
+  progressLabel: { fontSize: 12, color: "var(--muted)" },
+  progressValue: { fontSize: 12, fontWeight: 600, color: "var(--text)" },
+  progressBar: { height: 5, backgroundColor: "var(--line)", borderRadius: 99, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 99, transition: "width 0.4s ease" },
   statusList: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 },
   statusRow: { display: "flex", alignItems: "center", gap: 8 },
@@ -524,41 +524,41 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: "column",
     gap: 3,
     padding: "10px 12px",
-    backgroundColor: "#F9F9F9",
-    border: "1px solid #E8E8E8",
-    borderLeft: "3px solid #5B2D8E",
+    backgroundColor: "var(--bg-soft)",
+    border: "1px solid var(--line)",
+    borderLeft: "3px solid var(--primary)",
     borderRadius: 7,
   },
-  nextStepLabel: { fontSize: 10, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" },
-  nextStepValue: { fontSize: 13, fontWeight: 500, color: "#5B2D8E" },
+  nextStepLabel: { fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em" },
+  nextStepValue: { fontSize: 13, fontWeight: 500, color: "var(--primary)" },
   completedBadge: {
     display: "flex",
     alignItems: "center",
     gap: 7,
     padding: "9px 12px",
-    backgroundColor: "#16A34A10",
-    border: "1px solid #16A34A30",
+    backgroundColor: "rgba(22,163,74,0.08)",
+    border: "1px solid rgba(22,163,74,0.3)",
     borderRadius: 7,
     fontSize: 13,
-    color: "#16A34A",
+    color: "var(--success)",
     fontWeight: 500,
   },
   table: { width: "100%", borderCollapse: "collapse" },
   th: {
     fontSize: 10,
     fontWeight: 600,
-    color: "#6B7280",
+    color: "var(--muted)",
     textTransform: "uppercase",
     letterSpacing: "0.06em",
     padding: "0 0 10px",
     textAlign: "left",
-    borderBottom: "1px solid #E8E8E8",
+    borderBottom: "1px solid var(--line)",
   },
   td: {
     fontSize: 13,
-    color: "#6B7280",
+    color: "var(--muted)",
     padding: "10px 0",
-    borderBottom: "1px solid #F0F0F0",
+    borderBottom: "1px solid var(--line)",
   },
   pill: {
     display: "inline-block",

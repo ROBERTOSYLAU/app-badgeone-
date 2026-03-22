@@ -5,10 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { RequireAuth, useAuth } from "../../../lib/auth-context";
 
-function AdminSidebar() {
-  const { user, logout } = useAuth();
-  const pathname = usePathname();
-  const router = useRouter();
+function DarkModeToggle() {
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
@@ -19,7 +16,7 @@ function AdminSidebar() {
     }
   }, []);
 
-  function toggleDark() {
+  function toggle() {
     const next = !dark;
     setDark(next);
     if (next) {
@@ -31,11 +28,48 @@ function AdminSidebar() {
     }
   }
 
+  return (
+    <button
+      onClick={toggle}
+      title={dark ? "Modo claro" : "Modo escuro"}
+      style={{
+        position: "fixed",
+        top: 14,
+        right: 16,
+        zIndex: 1000,
+        background: "rgba(255,255,255,0.12)",
+        border: "1px solid rgba(255,255,255,0.2)",
+        backdropFilter: "blur(8px)",
+        color: "#fff",
+        borderRadius: 8,
+        padding: "6px 12px",
+        fontSize: 12,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        fontWeight: 500,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      }}
+    >
+      <span>{dark ? "☀️" : "🌙"}</span>
+      <span style={{ color: "rgba(255,255,255,0.9)" }}>
+        {dark ? "Claro" : "Escuro"}
+      </span>
+    </button>
+  );
+}
+
+function AdminSidebar() {
+  const { user, logout } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+
   const navItems = [
     { href: "/admin", label: "Visão Geral", icon: "📊" },
     { href: "/admin/organizations", label: "Organizações", icon: "🏢" },
     { href: "/admin/lots", label: "Lotes", icon: "📦" },
-    { href: "/admin/audit", label: "Auditoria", icon: "📋" },
+    { href: "/admin/audit", label: "Histórico", icon: "📋" },
   ];
 
   return (
@@ -67,7 +101,9 @@ function AdminSidebar() {
         }}
       >
         <span style={{ fontSize: 20 }}>🏅</span>
-        <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>Badge One</span>
+        <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>
+          Badge One
+        </span>
       </Link>
 
       <nav style={{ display: "grid", gap: 3 }}>
@@ -117,28 +153,10 @@ function AdminSidebar() {
         </div>
 
         <button
-          onClick={toggleDark}
-          title={dark ? "Modo claro" : "Modo escuro"}
-          style={{
-            width: "100%",
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            color: "rgba(255,255,255,0.7)",
-            borderRadius: 7,
-            padding: "6px 10px",
-            fontSize: 12,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
+          onClick={() => {
+            logout();
+            router.push("/");
           }}
-        >
-          <span>{dark ? "☀️" : "🌙"}</span>
-          <span>{dark ? "Modo Claro" : "Modo Escuro"}</span>
-        </button>
-
-        <button
-          onClick={() => { logout(); router.push("/"); }}
           style={{
             width: "100%",
             background: "rgba(255,255,255,0.08)",
@@ -161,6 +179,7 @@ function AdminSidebar() {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <RequireAuth>
+      <DarkModeToggle />
       <div
         style={{
           display: "grid",

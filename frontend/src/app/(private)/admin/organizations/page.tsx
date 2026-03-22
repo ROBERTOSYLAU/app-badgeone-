@@ -278,7 +278,6 @@ export default function AdminOrganizationsPage() {
       await apiDelete(`/api/v1/organizations/${id}`);
       setMessage("Organização movida para a lixeira.");
       await loadOrgs();
-      setStatus("trashed");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro ao mover organização para lixeira.";
       setMessage(msg);
