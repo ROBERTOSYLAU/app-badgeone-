@@ -862,3 +862,61 @@ button:disabled { opacity: .6; cursor: not-allowed; }
   .landing-hero h1 { font-size: 28px; }
   .landing-features { grid-template-columns: 1fr; }
 }
+
+/* ── Fix button hover contrast ───────────────────────────────── */
+.btn-active:hover {
+  background: rgba(181,212,0,0.25);
+  color: #3A4400;
+}
+
+/* ── Dark Mode ─────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg: #0F172A;
+  --bg-soft: #1A2540;
+  --card: #1E293B;
+  --line: #334155;
+  --text: #F1F5F9;
+  --muted: #94A3B8;
+  --primary: #9B59E8;
+  --primary-hover: #7C3AED;
+  --accent: #B5D400;
+  --sidebar-bg: #1A0A3E;
+  --danger: #F87171;
+  --success: #4ADE80;
+}
+
+[data-theme="dark"] body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select {
+  background: #1A2540;
+  border-color: #334155;
+  color: var(--text);
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus {
+  border-color: var(--primary);
+}
+
+[data-theme="dark"] .lp-form-panel { background: #1E293B; }
+[data-theme="dark"] .lp-card { background: #1E293B; border-color: #334155; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+[data-theme="dark"] .lp-card-header h2 { color: var(--text); }
+[data-theme="dark"] .lp-card-header p { color: var(--muted); }
+[data-theme="dark"] .lp-input { background: #0F172A; border-color: #334155; color: var(--text); }
+[data-theme="dark"] .lp-profile-btn { background: #1A2540; border-color: #334155; color: var(--text); }
+[data-theme="dark"] .lp-profile-label { color: var(--text); }
+[data-theme="dark"] .lp-back-link { color: var(--muted); }
+[data-theme="dark"] .lp-back-link:hover { color: var(--text); }
+
+[data-theme="dark"] .landing-page { background: var(--bg); }
+[data-theme="dark"] .landing-hero h1 { color: #9B59E8; }
+[data-theme="dark"] .landing-feature { background: var(--card); border-color: var(--line); }
+[data-theme="dark"] .landing-btn-secondary { border-color: var(--primary); color: var(--primary); }
+
+[data-theme="dark"] .btn-active:hover { color: #B5D400; }
+
+[data-theme="dark"] .lp-mobile-brand { color: var(--text); }

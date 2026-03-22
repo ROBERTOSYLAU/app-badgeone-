@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { RequireAuth, useAuth } from "../../../lib/auth-context";
 
@@ -8,6 +9,27 @@ function AdminSidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark") {
+      setDark(true);
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+  }, []);
+
+  function toggleDark() {
+    const next = !dark;
+    setDark(next);
+    if (next) {
+      document.documentElement.setAttribute("data-theme", "dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+      localStorage.setItem("theme", "light");
+    }
+  }
 
   const navItems = [
     { href: "/admin", label: "Visão Geral", icon: "📊" },
@@ -21,7 +43,7 @@ function AdminSidebar() {
       style={{
         width: 180,
         minHeight: "100vh",
-        background: "#3D1F6E",
+        background: "var(--sidebar-bg, #3D1F6E)",
         borderRight: "1px solid rgba(255,255,255,0.08)",
         padding: "12px 10px",
         display: "flex",
@@ -95,10 +117,28 @@ function AdminSidebar() {
         </div>
 
         <button
-          onClick={() => {
-            logout();
-            router.push("/");
+          onClick={toggleDark}
+          title={dark ? "Modo claro" : "Modo escuro"}
+          style={{
+            width: "100%",
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            color: "rgba(255,255,255,0.7)",
+            borderRadius: 7,
+            padding: "6px 10px",
+            fontSize: 12,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
           }}
+        >
+          <span>{dark ? "☀️" : "🌙"}</span>
+          <span>{dark ? "Modo Claro" : "Modo Escuro"}</span>
+        </button>
+
+        <button
+          onClick={() => { logout(); router.push("/"); }}
           style={{
             width: "100%",
             background: "rgba(255,255,255,0.08)",
@@ -118,11 +158,7 @@ function AdminSidebar() {
   );
 }
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <RequireAuth>
       <div
@@ -130,7 +166,7 @@ export default function AdminLayout({
           display: "grid",
           gridTemplateColumns: "180px 1fr",
           minHeight: "100vh",
-          background: "#F5F5F5",
+          background: "var(--bg-soft, #F5F5F5)",
         }}
       >
         <AdminSidebar />

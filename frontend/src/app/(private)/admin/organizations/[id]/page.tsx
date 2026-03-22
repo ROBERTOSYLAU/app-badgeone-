@@ -597,179 +597,177 @@ export default function OrganizationDetailsPage({
 
   return (
     <main className="container">
-      <div className="header-row">
-        <h1>Organização</h1>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button className="btn-ghost" onClick={() => router.push("/admin/organizations")}>
-            ← Voltar
-          </button>
-          <button className="btn-ghost" onClick={() => loadAll()}>
-            Atualizar
-          </button>
+      {/* ── Header ── */}
+      <div className="header-row" style={{ marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <button
             className="btn-ghost"
-            onClick={() => {
-              logout();
-              router.push("/");
-            }}
+            style={{ fontSize: 12, padding: "4px 10px" }}
+            onClick={() => router.push("/admin/organizations")}
           >
-            Sair
+            ← Voltar
+          </button>
+          <h1 style={{ color: "var(--primary)", margin: 0, fontSize: 17 }}>
+            {org?.name || "Organização"}
+          </h1>
+          {org && (
+            <span style={{
+              padding: "3px 9px",
+              borderRadius: 999,
+              fontSize: 11,
+              fontWeight: 600,
+              background: `${getStatusColor(org.status)}18`,
+              color: getStatusColor(org.status),
+              border: `1px solid ${getStatusColor(org.status)}55`,
+            }}>
+              {getStatusLabel(org.status)}
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
+          <button className="btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={startEditing}>
+            ✏️ Editar
+          </button>
+          {org?.status !== "trashed" && (
+            <button className="btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={openCreateLotForm}>
+              + Criar Lote
+            </button>
+          )}
+          {org?.status === "active" && (
+            <button className="btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={deactivateOrganization}>
+              Pausar
+            </button>
+          )}
+          {(org?.status === "inactive" || org?.status === "paused") && (
+            <button className="btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={activateOrganization}>
+              Ativar
+            </button>
+          )}
+          {org?.status === "trashed" && (
+            <button className="btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={restoreOrganization}>
+              Restaurar
+            </button>
+          )}
+          {org?.status !== "trashed" && (
+            <button
+              className="btn-ghost"
+              style={{ fontSize: 12, padding: "5px 10px", color: "#DC2626", borderColor: "#DC262640" }}
+              onClick={deleteOrganization}
+            >
+              Lixeira
+            </button>
+          )}
+          {org?.status === "trashed" && (
+            <button
+              style={{ fontSize: 12, padding: "5px 10px", background: "#DC2626", color: "white", borderRadius: 7, border: "none", cursor: "pointer" }}
+              onClick={permanentDeleteOrganization}
+            >
+              Excluir permanentemente
+            </button>
+          )}
+          <button
+            className="btn-ghost"
+            style={{ fontSize: 12, padding: "5px 8px" }}
+            onClick={() => loadAll()}
+            title="Atualizar"
+          >
+            ↻
           </button>
         </div>
       </div>
 
-      {!org && <p className="error">Organização não encontrada.</p>}
-
+      {/* ── Message ── */}
       {message && (
-        <p className={message.toLowerCase().includes("erro") ? "error" : "success"}>
+        <div style={{
+          padding: "8px 12px",
+          borderRadius: 7,
+          fontSize: 13,
+          marginBottom: 10,
+          background: message.toLowerCase().includes("erro") ? "#DC262610" : "#16A34A10",
+          border: `1px solid ${message.toLowerCase().includes("erro") ? "#DC262630" : "#16A34A30"}`,
+          color: message.toLowerCase().includes("erro") ? "#DC2626" : "#16A34A",
+        }}>
           {message}
-        </p>
+        </div>
       )}
 
-      {isEditing && org && (
-        <section className="card" style={{ marginBottom: 20 }}>
-          <h2>Editar Organização</h2>
-          <form onSubmit={saveEdit}>
-            <div style={{ display: "grid", gap: 12 }}>
-              <div>
-                <label>Razão Social</label>
-                <input value={editName} onChange={(e) => setEditName(e.target.value)} required />
-              </div>
+      {!org && <p className="error">Organização não encontrada.</p>}
 
-              <div>
-                <label>CNPJ</label>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <input
-                    value={editDocument}
-                    onChange={(e) => setEditDocument(e.target.value)}
-                    placeholder="Somente números ou CNPJ formatado"
-                  />
-                  <button type="button" className="btn-ghost" onClick={lookupCnpjAndFill} disabled={isBusy}>
-                    Buscar CNPJ
-                  </button>
+      {/* ── Edit form ── */}
+      {isEditing && org && (
+        <section className="card" style={{ marginBottom: 10 }}>
+          <h2 style={{ fontSize: 13, marginBottom: 10, color: "var(--text)" }}>Editar Organização</h2>
+          <form onSubmit={saveEdit}>
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Razão Social</label>
+                  <input value={editName} onChange={(e) => setEditName(e.target.value)} required />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>CNPJ</label>
+                  <div style={{ display: "flex", gap: 5 }}>
+                    <input style={{ flex: 1 }} value={editDocument} onChange={(e) => setEditDocument(e.target.value)} />
+                    <button type="button" className="btn-ghost" style={{ whiteSpace: "nowrap", fontSize: 11, padding: "0 9px" }} onClick={lookupCnpjAndFill} disabled={isBusy}>
+                      Buscar
+                    </button>
+                  </div>
                 </div>
               </div>
-
               <div>
-                <label>Endereço</label>
+                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Endereço</label>
                 <input value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
               </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 12,
-                }}
-              >
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                 <div>
-                  <label>CNAE Principal</label>
-                  <input
-                    value={editCnae}
-                    onChange={(e) => setEditCnae(e.target.value)}
-                    placeholder="Ex.: 8299-7/99 - descrição"
-                  />
+                  <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>CNAE</label>
+                  <input value={editCnae} onChange={(e) => setEditCnae(e.target.value)} />
                 </div>
-
                 <div>
-                  <label>Data de Abertura</label>
-                  <input
-                    value={editOpeningDate}
-                    onChange={(e) => setEditOpeningDate(e.target.value)}
-                    placeholder="DD/MM/AAAA ou AAAA-MM-DD"
-                  />
+                  <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Abertura</label>
+                  <input value={editOpeningDate} onChange={(e) => setEditOpeningDate(e.target.value)} placeholder="DD/MM/AAAA" />
                 </div>
-              </div>
-
-              <div>
-                <label>Natureza Jurídica</label>
-                <input value={editRegime} onChange={(e) => setEditRegime(e.target.value)} />
+                <div>
+                  <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Natureza Jurídica</label>
+                  <input value={editRegime} onChange={(e) => setEditRegime(e.target.value)} />
+                </div>
               </div>
             </div>
-
-            <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-              <button type="submit" disabled={isBusy}>
-                Salvar Alterações
-              </button>
-              <button type="button" className="btn-ghost" onClick={runOrganizationMigration} disabled={isBusy}>
-                Rodar migração
-              </button>
-              <button type="button" className="btn-ghost" onClick={() => setIsEditing(false)}>
-                Cancelar
-              </button>
+            <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+              <button type="submit" style={{ fontSize: 12, padding: "6px 14px", width: "auto" }} disabled={isBusy}>Salvar</button>
+              <button type="button" className="btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => setIsEditing(false)}>Cancelar</button>
             </div>
           </form>
         </section>
       )}
 
+      {/* ── Create lot form ── */}
       {showCreateLot && org && (
-        <section className="card" style={{ marginBottom: 20 }} ref={lotFormRef}>
-          <h2>Criar Lote</h2>
+        <section className="card" style={{ marginBottom: 10 }} ref={lotFormRef}>
+          <h2 style={{ fontSize: 13, marginBottom: 10, color: "var(--text)" }}>Novo Lote — {org.name}</h2>
           <form onSubmit={createLot}>
-            <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <div>
-                <label>Organização</label>
-                <input value={org.name} disabled />
+                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Título</label>
+                <input value={lotTitle} onChange={(e) => setLotTitle(e.target.value)} placeholder="Ex: Lote Março 2026" />
               </div>
-
               <div>
-                <label>Título do Lote (opcional)</label>
-                <input
-                  value={lotTitle}
-                  onChange={(e) => setLotTitle(e.target.value)}
-                  placeholder="Ex: Lote Março 2026"
-                />
+                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Descrição</label>
+                <input value={lotDescription} onChange={(e) => setLotDescription(e.target.value)} placeholder="Opcional" />
               </div>
-
               <div>
-                <label>Descrição (opcional)</label>
-                <input
-                  value={lotDescription}
-                  onChange={(e) => setLotDescription(e.target.value)}
-                  placeholder="Descrição do lote"
-                />
+                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Qtd. Badges *</label>
+                <input type="number" value={lotQuantity} onChange={(e) => setLotQuantity(e.target.value)} placeholder="100" required min="1" />
               </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 12,
-                }}
-              >
-                <div>
-                  <label>Quantidade de Badges *</label>
-                  <input
-                    type="number"
-                    value={lotQuantity}
-                    onChange={(e) => setLotQuantity(e.target.value)}
-                    placeholder="100"
-                    required
-                    min="1"
-                  />
-                </div>
-
-                <div>
-                  <label>Janela de emissão em dias *</label>
-                  <input
-                    type="number"
-                    value={lotIssueWindowDays}
-                    onChange={(e) => setLotIssueWindowDays(e.target.value)}
-                    placeholder="365"
-                    required
-                    min="1"
-                  />
-                </div>
+              <div>
+                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Janela de emissão (dias) *</label>
+                <input type="number" value={lotIssueWindowDays} onChange={(e) => setLotIssueWindowDays(e.target.value)} placeholder="365" required min="1" />
               </div>
             </div>
-
-            <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-              <button type="submit" disabled={isBusy}>
-                Criar Lote
-              </button>
-              <button type="button" className="btn-ghost" onClick={() => setShowCreateLot(false)}>
-                Cancelar
-              </button>
+            <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+              <button type="submit" style={{ fontSize: 12, padding: "6px 14px", width: "auto" }} disabled={isBusy}>Criar Lote</button>
+              <button type="button" className="btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => setShowCreateLot(false)}>Cancelar</button>
             </div>
           </form>
         </section>
@@ -777,353 +775,435 @@ export default function OrganizationDetailsPage({
 
       {org && (
         <>
-          <section className="card">
-            <h2>{org.name}</h2>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                gap: "12px",
-                marginBottom: "20px",
-                background: "rgba(255,255,255,0.02)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: "14px",
-                padding: "16px",
-              }}
-            >
-              <div>
-                <strong>ID:</strong>
-                <div>#{org.id}</div>
-              </div>
-
-              <div>
-                <strong>CNPJ:</strong>
-                <div>{org.document || "não informado"}</div>
-              </div>
-
-              <div>
-                <strong>Status:</strong>
-                <div>{getStatusLabel(org.status)}</div>
-              </div>
-
-              <div>
-                <strong>Endereço:</strong>
-                <div>{org.address || "não informado"}</div>
-              </div>
-
-              <div>
-                <strong>CNAE principal:</strong>
-                <div>{org.cnae || "não informado"}</div>
-              </div>
-
-              <div>
-                <strong>Data de abertura:</strong>
-                <div>{formatDateBR(org.opening_date)}</div>
-              </div>
-
-              <div>
-                <strong>Natureza / regime:</strong>
-                <div>{org.regime || "não informado"}</div>
-              </div>
+          {/* ── Info card ── */}
+          <section className="card" style={{ marginBottom: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px 16px", marginBottom: 10 }}>
+              <OrgInfoField label="ID" value={`#${org.id}`} />
+              <OrgInfoField label="CNPJ" value={org.document || "—"} />
+              <OrgInfoField label="Status" value={getStatusLabel(org.status)} color={getStatusColor(org.status)} />
+              <OrgInfoField label="Abertura" value={formatDateBR(org.opening_date)} />
             </div>
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button className="btn-ghost" onClick={startEditing}>
-                Editar
-              </button>
-
-              {org.status !== "trashed" && (
-                <button className="btn-ghost" onClick={openCreateLotForm}>
-                  Criar lote
-                </button>
-              )}
-
-              {org.status === "active" ? (
-                <button className="btn-ghost" onClick={deactivateOrganization}>
-                  Pausar
-                </button>
-              ) : org.status === "trashed" ? (
-                <button className="btn-ghost" onClick={restoreOrganization}>
-                  Restaurar
-                </button>
-              ) : (
-                <button className="btn-ghost" onClick={activateOrganization}>
-                  Ativar
-                </button>
-              )}
-
-              {org.status !== "trashed" && (
-                <button className="btn-ghost" onClick={deleteOrganization}>
-                  Lixeira
-                </button>
-              )}
-
-              {org.status === "trashed" && (
-                <button className="btn-ghost" onClick={permanentDeleteOrganization}>
-                  Excluir permanentemente
-                </button>
-              )}
+            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 8, display: "grid", gap: 4 }}>
+              <OrgInfoRow label="Endereço" value={org.address || "—"} />
+              <OrgInfoRow label="CNAE" value={org.cnae || "—"} />
+              <OrgInfoRow label="Natureza" value={org.regime || "—"} />
             </div>
           </section>
 
+          {/* ── KPIs ── */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
+            <OrgKpiMini label="Lotes" value={lots.length} />
+            <OrgKpiMini label="Emitidos" value={totalIssued} />
+            <OrgKpiMini label="Saldo" value={totalRemaining} />
+          </div>
+
+          {/* ── Tabs ── */}
           <section className="card">
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-              <button className={tab === "overview" ? "btn-active" : "btn-ghost"} onClick={() => setTab("overview")}>
-                Visão geral
-              </button>
-              <button className={tab === "active" ? "btn-active" : "btn-ghost"} onClick={() => setTab("active")}>
-                Lotes ativos
-              </button>
-              <button className={tab === "revoked" ? "btn-active" : "btn-ghost"} onClick={() => setTab("revoked")}>
-                Lotes revogados/finalizados
-              </button>
-              <button className={tab === "notes" ? "btn-active" : "btn-ghost"} onClick={() => setTab("notes")}>
-                Anotações
-              </button>
-              <button className={tab === "trash" ? "btn-active" : "btn-ghost"} onClick={() => setTab("trash")}>
-                Lixeira
-              </button>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12, borderBottom: "1px solid var(--line)", paddingBottom: 10 }}>
+              {(["overview", "active", "revoked", "notes", "trash"] as TabKey[]).map((t) => {
+                const labels: Record<TabKey, string> = {
+                  overview: "Visão Geral",
+                  active: `Lotes Ativos${activeLots.length > 0 ? ` (${activeLots.length})` : ""}`,
+                  revoked: "Revogados",
+                  notes: `Anotações${notesList.length > 0 ? ` (${notesList.length})` : ""}`,
+                  trash: `Lixeira${(trashedLots.length + trashedCreds.length) > 0 ? ` (${trashedLots.length + trashedCreds.length})` : ""}`,
+                };
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    style={{
+                      fontSize: 12,
+                      padding: "5px 12px",
+                      borderRadius: 6,
+                      border: tab === t ? "1px solid var(--primary)" : "1px solid var(--line)",
+                      background: tab === t ? "rgba(91,45,142,0.1)" : "transparent",
+                      color: tab === t ? "var(--primary)" : "var(--muted)",
+                      fontWeight: tab === t ? 600 : 400,
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {labels[t]}
+                  </button>
+                );
+              })}
             </div>
 
+            {/* Overview */}
             {tab === "overview" && (
-              <div className="form-grid">
-                <div>
-                  <p><strong>Total de lotes:</strong> {lots.length}</p>
-                  <p><strong>Total emitido:</strong> {totalIssued}</p>
-                  <p><strong>Saldo total:</strong> {totalRemaining}</p>
-                </div>
-
-                <div className="card" style={{ marginBottom: 0 }}>
-                  <h2 style={{ fontSize: 16 }}>Lotes da organização ({lots.length})</h2>
-                  <div style={{ display: "grid", gap: 10 }}>
-                    {lots.map((l) => (
-                      <Link
-                        key={l.id}
-                        href={`/admin/lots/${l.id}`}
-                        className="card"
-                        style={{
-                          marginBottom: 0,
-                          textDecoration: "none",
-                          color: "#fff",
-                          background: "rgba(255,255,255,0.02)",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                        }}
-                      >
-                        <div style={{ display: "grid", gap: 6 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                            <strong>{l.title || `Lote #${l.id}`}</strong>
-                            <span
-                              style={{
-                                padding: "2px 8px",
-                                borderRadius: 999,
-                                fontSize: 12,
-                                background: getStatusColor(l.status) + "20",
-                                color: getStatusColor(l.status),
-                                border: `1px solid ${getStatusColor(l.status)}`,
-                              }}
-                            >
-                              {getStatusLabel(l.status)}
-                            </span>
-                          </div>
-                          <div className="muted">
-                            Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Janela {l.issue_window_days || 0} dias
-                          </div>
-                          {l.description ? <div className="muted">{shortText(l.description, 110)}</div> : null}
-                        </div>
-                      </Link>
-                    ))}
-                    {!lots.length && <div>Nenhum lote cadastrado.</div>}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {tab === "active" && (
-              <div className="form-grid">
-                <div style={{ display: "grid", gap: 10 }}>
-                  {activeLots.map((l) => (
-                    <section
-                      key={l.id}
-                      className="card"
-                      style={{ marginBottom: 0, background: "rgba(255,255,255,0.02)" }}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 8 }}>
+                {lots.map((l) => (
+                  <Link key={l.id} href={`/admin/lots/${l.id}`} style={{ textDecoration: "none" }}>
+                    <div style={{
+                      padding: "10px 12px",
+                      border: "1px solid var(--line)",
+                      borderRadius: 8,
+                      background: "var(--bg-soft)",
+                      transition: "border-color 0.15s, box-shadow 0.15s",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--primary)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(91,45,142,0.1)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--line)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}
                     >
-                      <div style={{ display: "grid", gap: 8 }}>
-                        <Link
-                          href={`/admin/lots/${l.id}`}
-                          style={{ textDecoration: "none", color: "#fff", fontWeight: 800 }}
-                        >
-                          {(l.title || `Lote #${l.id}`).toUpperCase()}
-                        </Link>
-
-                        <div className="muted">
-                          Total {l.total_badges} | Emitidos {l.issued} | Saldo {l.remaining} | Janela {l.issue_window_days || 0} dias
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>
+                          {l.title || `Lote #${l.id}`}
+                        </span>
+                        <span style={{
+                          padding: "2px 7px",
+                          borderRadius: 999,
+                          fontSize: 10,
+                          fontWeight: 600,
+                          background: `${getStatusColor(l.status)}18`,
+                          color: getStatusColor(l.status),
+                          border: `1px solid ${getStatusColor(l.status)}50`,
+                          whiteSpace: "nowrap",
+                          marginLeft: 8,
+                        }}>
+                          {getStatusLabel(l.status)}
+                        </span>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
+                        <OrgLotStat label="Total" value={l.total_badges} />
+                        <OrgLotStat label="Emitidos" value={l.issued} />
+                        <OrgLotStat label="Saldo" value={l.remaining} />
+                      </div>
+                      {l.issue_window_days && (
+                        <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 5 }}>
+                          Janela: {l.issue_window_days} dias
                         </div>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+                {!lots.length && (
+                  <div style={{ gridColumn: "1/-1", padding: "24px", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
+                    Nenhum lote cadastrado.{" "}
+                    <button className="btn-ghost" style={{ fontSize: 12, padding: "4px 10px", marginLeft: 6 }} onClick={openCreateLotForm}>
+                      + Criar primeiro lote
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          {l.status === "active" ? (
-                            <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "paused" })}>
-                              Pausar lote
-                            </button>
-                          ) : (
-                            <button className="btn-ghost" onClick={() => updateLot(l.id, { status: "active" })}>
-                              Ativar lote
-                            </button>
-                          )}
+            {/* Active lots */}
+            {tab === "active" && (
+              <div style={{ display: "grid", gap: 6 }}>
+                {activeLots.map((l) => (
+                  <div key={l.id} style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "9px 12px",
+                    border: "1px solid var(--line)",
+                    borderRadius: 8,
+                    background: "var(--card)",
+                  }}>
+                    <Link href={`/admin/lots/${l.id}`} style={{ flex: 1, textDecoration: "none" }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>
+                        {l.title || `Lote #${l.id}`}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                        Total {l.total_badges} · Emitidos {l.issued} · Saldo {l.remaining} · {l.issue_window_days || 0} dias
+                      </div>
+                    </Link>
+                    <span style={{
+                      padding: "2px 7px",
+                      borderRadius: 999,
+                      fontSize: 10,
+                      fontWeight: 600,
+                      background: `${getStatusColor(l.status)}18`,
+                      color: getStatusColor(l.status),
+                      border: `1px solid ${getStatusColor(l.status)}50`,
+                      whiteSpace: "nowrap",
+                    }}>
+                      {getStatusLabel(l.status)}
+                    </span>
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                      {l.status === "active" ? (
+                        <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => updateLot(l.id, { status: "paused" })}>Pausar</button>
+                      ) : (
+                        <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => updateLot(l.id, { status: "active" })}>Ativar</button>
+                      )}
+                      <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => revokeLotFlow(l)}>Revogar</button>
+                      <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px", color: "#DC2626", borderColor: "#DC262640" }} onClick={() => moveLotToTrash(l)}>Lixeira</button>
+                    </div>
+                  </div>
+                ))}
+                {!activeLots.length && (
+                  <div style={{ textAlign: "center", color: "var(--muted)", padding: "20px 0", fontSize: 13 }}>
+                    Nenhum lote ativo.
+                  </div>
+                )}
+              </div>
+            )}
 
-                          <button className="btn-ghost" onClick={() => revokeLotFlow(l)}>
-                            Revogar lote
-                          </button>
+            {/* Revoked lots */}
+            {tab === "revoked" && (
+              <div style={{ display: "grid", gap: 6 }}>
+                {revokedLots.map((l) => (
+                  <div key={l.id} style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "9px 12px",
+                    border: "1px solid var(--line)",
+                    borderRadius: 8,
+                    background: "var(--card)",
+                  }}>
+                    <Link href={`/admin/lots/${l.id}`} style={{ flex: 1, textDecoration: "none" }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{l.title || `Lote #${l.id}`}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                        Emitidos {l.issued} · Total {l.total_badges}
+                      </div>
+                    </Link>
+                    <span style={{
+                      padding: "2px 7px",
+                      borderRadius: 999,
+                      fontSize: 10,
+                      fontWeight: 600,
+                      background: `${getStatusColor(l.status)}18`,
+                      color: getStatusColor(l.status),
+                      border: `1px solid ${getStatusColor(l.status)}50`,
+                      whiteSpace: "nowrap",
+                    }}>
+                      {getStatusLabel(l.status)}
+                    </span>
+                    <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px", flexShrink: 0 }} onClick={() => recoverLotFlow(l)}>Recuperar</button>
+                  </div>
+                ))}
+                {!revokedLots.length && (
+                  <div style={{ textAlign: "center", color: "var(--muted)", padding: "20px 0", fontSize: 13 }}>
+                    Nenhum lote revogado.
+                  </div>
+                )}
+              </div>
+            )}
 
-                          <button className="btn-ghost" onClick={() => moveLotToTrash(l)}>
-                            Lixeira
+            {/* Notes */}
+            {tab === "notes" && (
+              <div style={{ display: "grid", gap: 10, maxWidth: 600 }}>
+                <div style={{ display: "grid", gap: 6 }}>
+                  <input
+                    value={noteTitle}
+                    onChange={(e) => setNoteTitle(e.target.value)}
+                    placeholder="Título (opcional)"
+                  />
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Anotação interna..."
+                    style={{
+                      minHeight: 80,
+                      borderRadius: 7,
+                      padding: "8px 10px",
+                      fontSize: 13,
+                      background: "var(--bg-soft)",
+                      color: "var(--text)",
+                      border: "1px solid var(--line)",
+                      resize: "vertical",
+                      fontFamily: "inherit",
+                      width: "100%",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <button onClick={saveNote} style={{ fontSize: 12, padding: "6px 14px", width: "auto" }}>
+                    Salvar anotação
+                  </button>
+                </div>
+                <div style={{ display: "grid", gap: 6 }}>
+                  {notesList.map((n, i) => (
+                    <div key={n.id} style={{
+                      padding: "10px 12px",
+                      border: "1px solid var(--line)",
+                      borderRadius: 8,
+                      background: "var(--bg-soft)",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                        <strong style={{ fontSize: 13, color: "var(--text)" }}>{n.title || `Anotação ${i + 1}`}</strong>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                          <span style={{ fontSize: 11, color: "var(--muted)" }}>{n.created_at?.slice(0, 10) || ""}</span>
+                          <button
+                            className="btn-ghost"
+                            style={{ fontSize: 11, padding: "2px 7px", color: "#DC2626", borderColor: "#DC262640" }}
+                            onClick={() => removeNote(n.id)}
+                          >
+                            Excluir
                           </button>
                         </div>
                       </div>
-                    </section>
+                      <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>{n.content}</p>
+                    </div>
                   ))}
-                  {!activeLots.length && <div>Nenhum lote ativo/pausado.</div>}
-                </div>
-
-                <div className="card" style={{ marginBottom: 0 }}>
-                  <h2 style={{ fontSize: 16 }}>Credenciais emitidas desta organização</h2>
-                  <ul className="list">
-                    {credentials.map((c) => (
-                      <li key={c.id}>
-                        {c.recipient_name} | {c.course_name} | status: {c.status}
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
-                          <button className="btn-ghost" onClick={() => updateCredential(c.id, "paused")}>
-                            Pausar
-                          </button>
-                          <button className="btn-ghost" onClick={() => revokeCredential(c.id)}>
-                            Revogar
-                          </button>
-                          <button className="btn-ghost" onClick={() => updateCredential(c.id, "valid")}>
-                            Ativar
-                          </button>
-                          <button className="btn-ghost" onClick={() => trashCredential(c.id)}>
-                            Lixeira
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                    {!credentials.length && <li>Nenhuma credencial emitida ainda.</li>}
-                  </ul>
+                  {!notesList.length && (
+                    <div style={{ textAlign: "center", color: "var(--muted)", fontSize: 13, padding: "12px 0" }}>
+                      Nenhuma anotação salva.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {tab === "revoked" && (
-              <div style={{ display: "grid", gap: 10 }}>
-                {revokedLots.map((l) => (
-                  <section key={l.id} className="card" style={{ marginBottom: 0 }}>
-                    <div style={{ display: "grid", gap: 8 }}>
-                      <Link
-                        href={`/admin/lots/${l.id}`}
-                        style={{ textDecoration: "none", color: "#fff", fontWeight: 800 }}
-                      >
-                        {l.title || `Lote #${l.id}`}
-                      </Link>
-
-                      <div className="muted">
-                        Emitidos {l.issued} | Total {l.total_badges}
+            {/* Trash tab */}
+            {tab === "trash" && (
+              <div style={{ display: "grid", gap: 12 }}>
+                {org.status === "trashed" && (
+                  <div style={{
+                    padding: "12px 14px",
+                    border: "1px solid #DC262630",
+                    borderRadius: 8,
+                    background: "#DC262606",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    flexWrap: "wrap",
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#DC2626" }}>
+                        Esta organização está na lixeira
                       </div>
-
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button className="btn-ghost" onClick={() => recoverLotFlow(l)}>
-                          Recuperar lote
-                        </button>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                        Restaure para continuar usando, ou exclua permanentemente.
                       </div>
                     </div>
-                  </section>
-                ))}
-                {!revokedLots.length && <div>Nenhum lote revogado/finalizado.</div>}
-              </div>
-            )}
-
-            {tab === "notes" && (
-              <div className="form-grid" style={{ maxWidth: 760 }}>
-                <input
-                  value={noteTitle}
-                  onChange={(e) => setNoteTitle(e.target.value)}
-                  placeholder="Título (opcional)"
-                />
-
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Anotações internas desta organização..."
-                  style={{
-                    minHeight: 140,
-                    borderRadius: 8,
-                    padding: 10,
-                    background: "#0a163e",
-                    color: "#fff",
-                    border: "1px solid #2a3b73",
-                  }}
-                />
-
-                <button onClick={saveNote}>Salvar anotação</button>
-
-                <p className="muted">Total de anotações: {notesList.length}</p>
-
-                <ul className="list">
-                  {notesList.map((n, i) => (
-                    <li key={n.id}>
-                      <strong>{i + 1}. {n.title}</strong>{" "}
-                      <span className="muted">({n.created_at?.slice(0, 10) || "-"})</span>
-                      <p>{n.content}</p>
-                      <button className="btn-ghost" onClick={() => removeNote(n.id)}>
-                        Excluir anotação
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button className="btn-ghost" style={{ fontSize: 12, padding: "5px 10px" }} onClick={restoreOrganization}>
+                        Restaurar
                       </button>
-                    </li>
-                  ))}
-                  {!notesList.length && <li>Nenhuma anotação salva.</li>}
-                </ul>
-              </div>
-            )}
+                      <button
+                        style={{ fontSize: 12, padding: "5px 10px", background: "#DC2626", color: "white", borderRadius: 7, border: "none", cursor: "pointer" }}
+                        onClick={permanentDeleteOrganization}
+                      >
+                        Excluir permanentemente
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-            {tab === "trash" && (
-              <div className="form-grid">
-                <div className="card" style={{ marginBottom: 0 }}>
-                  <h2 style={{ fontSize: 16 }}>Lotes na lixeira</h2>
-                  <ul className="list">
-                    {trashedLots.map((l) => (
-                      <li key={l.id}>
-                        <div style={{ fontWeight: 700 }}>{l.title || `Lote #${l.id}`}</div>
-                        <div className="muted">Total {l.total_badges} | Emitidos {l.issued}</div>
-                        <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <button className="btn-ghost" onClick={() => recoverLotFlow(l)}>
-                            Restaurar lote
+                {trashedLots.length > 0 && (
+                  <div>
+                    <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 6px" }}>
+                      Lotes na lixeira ({trashedLots.length})
+                    </p>
+                    <div style={{ display: "grid", gap: 5 }}>
+                      {trashedLots.map((l) => (
+                        <div key={l.id} style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "8px 12px",
+                          border: "1px solid var(--line)",
+                          borderRadius: 7,
+                          background: "var(--card)",
+                          gap: 10,
+                        }}>
+                          <div>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+                              {l.title || `Lote #${l.id}`}
+                            </span>
+                            <span style={{ color: "var(--muted)", fontSize: 11, marginLeft: 8 }}>
+                              Total {l.total_badges} · Emitidos {l.issued}
+                            </span>
+                          </div>
+                          <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => recoverLotFlow(l)}>
+                            Restaurar
                           </button>
                         </div>
-                      </li>
-                    ))}
-                    {!trashedLots.length && <li>Nenhum lote na lixeira.</li>}
-                  </ul>
-                </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                <div className="card" style={{ marginBottom: 0 }}>
-                  <h2 style={{ fontSize: 16 }}>Credenciais na lixeira</h2>
-                  <ul className="list">
-                    {trashedCreds.map((c) => (
-                      <li key={c.id}>
-                        {c.recipient_name} | {c.course_name}
-                        <div style={{ marginTop: 6 }}>
-                          <button className="btn-ghost" onClick={() => updateCredential(c.id, "valid")}>
-                            Restaurar credencial
+                {trashedCreds.length > 0 && (
+                  <div>
+                    <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 6px" }}>
+                      Credenciais na lixeira ({trashedCreds.length})
+                    </p>
+                    <div style={{ display: "grid", gap: 5 }}>
+                      {trashedCreds.map((c) => (
+                        <div key={c.id} style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "8px 12px",
+                          border: "1px solid var(--line)",
+                          borderRadius: 7,
+                          background: "var(--card)",
+                          gap: 10,
+                        }}>
+                          <div>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{c.recipient_name}</span>
+                            <span style={{ color: "var(--muted)", fontSize: 11, marginLeft: 8 }}>{c.course_name}</span>
+                          </div>
+                          <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => updateCredential(c.id, "valid")}>
+                            Restaurar
                           </button>
                         </div>
-                      </li>
-                    ))}
-                    {!trashedCreds.length && <li>Nenhuma credencial na lixeira.</li>}
-                  </ul>
-                </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {trashedLots.length === 0 && trashedCreds.length === 0 && org.status !== "trashed" && (
+                  <div style={{ textAlign: "center", color: "var(--muted)", padding: "20px 0", fontSize: 13 }}>
+                    Lixeira vazia.
+                  </div>
+                )}
               </div>
             )}
           </section>
         </>
       )}
     </main>
+  );
+}
+
+/* ── Helper sub-components ── */
+
+function OrgInfoField({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase" as const, letterSpacing: "0.04em", marginBottom: 2 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: color || "var(--text)" }}>{value}</div>
+    </div>
+  );
+}
+
+function OrgInfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: "flex", gap: 6, fontSize: 12 }}>
+      <span style={{ color: "var(--muted)", minWidth: 72, flexShrink: 0 }}>{label}:</span>
+      <span style={{ color: "var(--text)" }}>{value}</span>
+    </div>
+  );
+}
+
+function OrgKpiMini({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={{
+      padding: "8px 12px",
+      border: "1px solid var(--line)",
+      borderRadius: 8,
+      background: "var(--card)",
+      textAlign: "center",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+    }}>
+      <div style={{ fontSize: 20, fontWeight: 700, color: "var(--primary)" }}>{value}</div>
+      <div style={{ fontSize: 11, color: "var(--muted)" }}>{label}</div>
+    </div>
+  );
+}
+
+function OrgLotStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={{ textAlign: "center" }}>
+      <div style={{ fontWeight: 600, color: "var(--text)", fontSize: 13 }}>{value}</div>
+      <div style={{ color: "var(--muted)", fontSize: 10 }}>{label}</div>
+    </div>
   );
 }
