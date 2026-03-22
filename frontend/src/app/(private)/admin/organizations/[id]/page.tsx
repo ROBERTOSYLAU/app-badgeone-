@@ -626,7 +626,7 @@ export default function OrganizationDetailsPage({
           <button
             className="btn-ghost"
             style={{ fontSize: 12, padding: "4px 10px" }}
-            onClick={() => router.push("/admin/organizations")}
+            onClick={() => router.back()}
           >
             ← Voltar
           </button>

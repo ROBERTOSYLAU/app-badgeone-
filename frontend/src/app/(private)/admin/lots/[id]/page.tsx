@@ -205,7 +205,7 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18, flexWrap: "wrap", gap: 10 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-            <button onClick={() => router.push("/admin/lots")} style={{ ...btnGhost, padding: "3px 9px", fontSize: 11 }}>← Lotes</button>
+            <button onClick={() => router.back()} style={{ ...btnGhost, padding: "3px 9px", fontSize: 11 }}>← Voltar</button>
             <h1 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: "var(--primary)" }}>
               {lot.title || `Lote #${lot.id}`}
             </h1>
@@ -224,11 +224,7 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <Link href={`/admin/organizations/${lot.organization_id}`} style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
-            🏢 Organização
-          </Link>
-        </div>
+        <div />
       </div>
 
       {msg && (
@@ -361,7 +357,9 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
                   background: "var(--primary)", color: "#fff", border: "none",
                   borderRadius: 6, cursor: saving ? "not-allowed" : "pointer",
                   opacity: !nContent.trim() ? 0.5 : 1,
+                  display: "inline-flex", alignItems: "center", gap: 6,
                 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   Salvar anotação
                 </button>
               </div>
