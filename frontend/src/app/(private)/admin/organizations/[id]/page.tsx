@@ -982,175 +982,104 @@ export default function OrganizationDetailsPage({
             </div>
           </section>
 
-          {/* ── Acesso Emissor ── */}
-          <section style={{ marginBottom: 10, background: "var(--card, #fff)", border: "1px solid var(--line)", borderRadius: 10, padding: "16px 20px" }}>
-            {/* Cabeçalho */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ background: "#1A3A5C", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 6, letterSpacing: "0.5px" }}>
-                  ACESSO EMISSOR
-                </span>
-                {issuerUser && (
-                  <span style={{
-                    fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
-                    background: issuerUser.status === "active" ? "#dcfce7" : "#fee2e2",
-                    color: issuerUser.status === "active" ? "#166534" : "#991b1b",
-                    border: `1px solid ${issuerUser.status === "active" ? "#86efac" : "#fca5a5"}`,
-                  }}>
-                    {issuerUser.status === "active" ? "● Ativo" : "● Inativo"}
-                  </span>
-                )}
-              </div>
+          {/* ── Acesso Emissor (compacto) ── */}
+          <section style={{ marginBottom: 8, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              {/* Badge */}
+              <span style={{ background: "#1A3A5C", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4, letterSpacing: "0.5px", whiteSpace: "nowrap" }}>ACESSO EMISSOR</span>
               {issuerUser && (
-                <button onClick={resetIssuerPassword}
-                  style={{ background: "none", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 6, padding: "4px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                  Redefinir para Emissor123
-                </button>
+                <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 999, background: issuerUser.status === "active" ? "#dcfce7" : "#fee2e2", color: issuerUser.status === "active" ? "#166534" : "#991b1b", border: `1px solid ${issuerUser.status === "active" ? "#86efac" : "#fca5a5"}` }}>
+                  {issuerUser.status === "active" ? "● Ativo" : "● Inativo"}
+                </span>
               )}
-            </div>
 
-            {issuerUser ? (
-              <>
-                {/* Grade: LOGIN | SENHA | COPIAR */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 12, alignItems: "start" }}>
+              {issuerUser ? (
+                <>
+                  <span style={{ color: "#cbd5e1", fontSize: 14 }}>|</span>
 
                   {/* LOGIN */}
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.7px" }}>Login (e-mail)</span>
-                      {!editingIssuerEmail && (
-                        <button onClick={() => { setIssuerEmailDraft(issuerUser.email); setEditingIssuerEmail(true); setEditingIssuerPassword(false); }}
-                          style={{ background: "#eff6ff", border: "1px solid #93c5fd", color: "#1d4ed8", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                          Editar
-                        </button>
-                      )}
-                    </div>
-                    {editingIssuerEmail ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        <input
-                          type="email"
-                          value={issuerEmailDraft}
-                          onChange={(e) => setIssuerEmailDraft(e.target.value)}
-                          placeholder="novo@email.com.br"
-                          style={{ fontSize: 13, padding: "8px 10px", borderRadius: 7, border: "1px solid #1A3A5C", outline: "none", width: "100%", boxSizing: "border-box" }}
-                          autoFocus
-                          onKeyDown={(e) => { if (e.key === "Enter") saveIssuerEmail(); if (e.key === "Escape") setEditingIssuerEmail(false); }}
-                        />
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button onClick={saveIssuerEmail}
-                            style={{ flex: 1, background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 6, padding: "6px 0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                            Salvar
-                          </button>
-                          <button onClick={() => setEditingIssuerEmail(false)}
-                            style={{ background: "none", border: "1px solid var(--line)", borderRadius: 6, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}>
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", background: "#f0f4f8", borderRadius: 7, border: "1px solid #ddd", minHeight: 38 }}>
-                        <span style={{ fontSize: 13, color: "#1A3A5C", fontWeight: 600, flex: 1 }}>
-                          {showIssuerLogin ? (issuerUser?.email || "sem email") : "••••••••••••••••••"}
-                        </span>
-                        <button type="button" onClick={() => setShowIssuerLogin(v => !v)} style={{ background: "none", border: "none", cursor: "pointer" }}>
-                          {showIssuerLogin ? "🙈" : "👁️"}
-                        </button>
-                        <button type="button" onClick={() => copyToClipboard(issuerUser.email, "email")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>
-                          {copiedField === "email" ? "✅" : "📋"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <span style={{ fontSize: 10, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Login</span>
+                  {editingIssuerEmail ? (
+                    <>
+                      <input type="email" value={issuerEmailDraft} onChange={(e) => setIssuerEmailDraft(e.target.value)} autoFocus
+                        style={{ fontSize: 12, padding: "3px 7px", borderRadius: 5, border: "1px solid #1A3A5C", outline: "none", width: 200 }}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveIssuerEmail(); if (e.key === "Escape") setEditingIssuerEmail(false); }} />
+                      <button type="button" onClick={saveIssuerEmail} style={{ fontSize: 11, padding: "2px 8px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }}>OK</button>
+                      <button type="button" onClick={() => setEditingIssuerEmail(false)} style={{ fontSize: 11, padding: "2px 6px", background: "none", border: "1px solid #ddd", borderRadius: 4, cursor: "pointer" }}>✕</button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontSize: 12, color: "#1A3A5C", fontWeight: 600, fontFamily: "monospace" }}>
+                        {showIssuerLogin ? (issuerUser?.email || "sem email") : "••••••••••••••"}
+                      </span>
+                      <button type="button" onClick={() => setShowIssuerLogin(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, padding: "0", lineHeight: 1 }}>{showIssuerLogin ? "🙈" : "👁️"}</button>
+                      <button type="button" onClick={() => copyToClipboard(issuerUser.email, "email")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, padding: "0", lineHeight: 1 }}>{copiedField === "email" ? "✅" : "📋"}</button>
+                      <button type="button" onClick={() => { setIssuerEmailDraft(issuerUser.email); setEditingIssuerEmail(true); setEditingIssuerPassword(false); }}
+                        style={{ fontSize: 10, padding: "2px 6px", background: "#eff6ff", border: "1px solid #93c5fd", color: "#1d4ed8", borderRadius: 4, cursor: "pointer" }}>Editar</button>
+                    </>
+                  )}
+
+                  <span style={{ color: "#cbd5e1", fontSize: 14 }}>|</span>
 
                   {/* SENHA */}
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.7px" }}>Senha</span>
-                      {!editingIssuerPassword && (
-                        <button onClick={() => { setIssuerPasswordDraft(""); setEditingIssuerPassword(true); setEditingIssuerEmail(false); }}
-                          style={{ background: "#eff6ff", border: "1px solid #93c5fd", color: "#1d4ed8", borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                          Editar Senha
-                        </button>
-                      )}
-                    </div>
-                    {editingIssuerPassword ? (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        <input
-                          type="password"
-                          value={issuerPasswordDraft}
-                          onChange={(e) => setIssuerPasswordDraft(e.target.value)}
-                          placeholder="Nova senha (mín. 6 chars)"
-                          style={{ fontSize: 13, padding: "8px 10px", borderRadius: 7, border: "1px solid #1A3A5C", outline: "none", width: "100%", boxSizing: "border-box" }}
-                          autoFocus
-                          onKeyDown={(e) => { if (e.key === "Enter") saveIssuerPassword(); if (e.key === "Escape") setEditingIssuerPassword(false); }}
-                        />
-                        <div style={{ display: "flex", gap: 4 }}>
-                          <button onClick={saveIssuerPassword}
-                            style={{ flex: 1, background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 6, padding: "6px 0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                            Salvar
-                          </button>
-                          <button onClick={() => setEditingIssuerPassword(false)}
-                            style={{ background: "none", border: "1px solid var(--line)", borderRadius: 6, padding: "6px 10px", fontSize: 12, cursor: "pointer" }}>
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    ) : issuerUser.password_is_default !== false ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#f0fdf4", borderRadius: 7, padding: "9px 10px", border: "1px solid #86efac", minHeight: 38 }}>
-                        <code style={{ fontSize: 14, color: "#16a34a", fontWeight: 700, flex: 1, letterSpacing: showIssuerPassword ? "1px" : "3px" }}>
-                          {showIssuerPassword ? "Emissor123" : "••••••••••"}
-                        </code>
-                        <button onClick={() => setShowIssuerPassword((v) => !v)}
-                          title={showIssuerPassword ? "Ocultar senha" : "Mostrar senha"}
-                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, padding: "0 2px", flexShrink: 0, opacity: 0.6 }}>
-                          {showIssuerPassword ? "🙈" : "👁️"}
-                        </button>
-                        <button onClick={() => copyToClipboard("Emissor123", "senha")}
-                          title="Copiar senha"
-                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: "0 2px", flexShrink: 0 }}>
-                          {copiedField === "senha" ? "✅" : "📋"}
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#fef9ec", borderRadius: 7, padding: "9px 10px", border: "1px solid #fcd34d", minHeight: 38 }}>
-                        <span style={{ fontSize: 14, color: "#78350f", fontWeight: 700, flex: 1, letterSpacing: "3px" }}>••••••••</span>
-                        <span style={{ fontSize: 10, color: "#92400e", fontWeight: 600, whiteSpace: "nowrap" }}>personalizada</span>
-                      </div>
-                    )}
-                  </div>
+                  <span style={{ fontSize: 10, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Senha</span>
+                  {editingIssuerPassword ? (
+                    <>
+                      <input type="password" value={issuerPasswordDraft} onChange={(e) => setIssuerPasswordDraft(e.target.value)} autoFocus placeholder="mín. 6 chars"
+                        style={{ fontSize: 12, padding: "3px 7px", borderRadius: 5, border: "1px solid #1A3A5C", outline: "none", width: 150 }}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveIssuerPassword(); if (e.key === "Escape") setEditingIssuerPassword(false); }} />
+                      <button type="button" onClick={saveIssuerPassword} style={{ fontSize: 11, padding: "2px 8px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer" }}>OK</button>
+                      <button type="button" onClick={() => setEditingIssuerPassword(false)} style={{ fontSize: 11, padding: "2px 6px", background: "none", border: "1px solid #ddd", borderRadius: 4, cursor: "pointer" }}>✕</button>
+                    </>
+                  ) : issuerUser.password_is_default !== false ? (
+                    <>
+                      <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "monospace", color: "#16a34a" }}>
+                        {showIssuerPassword ? "Emissor123" : "••••••••••"}
+                      </span>
+                      <button type="button" onClick={() => setShowIssuerPassword(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, padding: "0", lineHeight: 1 }}>{showIssuerPassword ? "🙈" : "👁️"}</button>
+                      <button type="button" onClick={() => copyToClipboard("Emissor123", "senha")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, padding: "0", lineHeight: 1 }}>{copiedField === "senha" ? "✅" : "📋"}</button>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: 12, fontFamily: "monospace", color: "#92400e", background: "#fef9ec", border: "1px solid #fcd34d", borderRadius: 4, padding: "1px 6px" }}>••••••••</span>
+                  )}
+                  {!editingIssuerPassword && (
+                    <button type="button" onClick={() => { setIssuerPasswordDraft(""); setEditingIssuerPassword(true); setEditingIssuerEmail(false); }}
+                      style={{ fontSize: 10, padding: "2px 6px", background: "#eff6ff", border: "1px solid #93c5fd", color: "#1d4ed8", borderRadius: 4, cursor: "pointer" }}>Editar Senha</button>
+                  )}
 
-                  {/* COPIAR TUDO */}
-                  <div style={{ paddingTop: 22 }}>
-                    <button
-                      onClick={() => copyToClipboard(`Login: ${issuerUser.email}\nSenha: ${issuerUser.password_is_default !== false ? "Emissor123" : "(senha personalizada)"}`, "ambos")}
-                      style={{ background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 7, padding: "9px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", height: 38 }}>
-                      {copiedField === "ambos" ? "✅ Copiado!" : "📋 Copiar tudo"}
-                    </button>
-                  </div>
-                </div>
+                  <span style={{ color: "#cbd5e1", fontSize: 14 }}>|</span>
 
-                <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 10, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
-                  {issuerUser.password_is_default !== false
-                    ? "Senha padrão de primeiro acesso · O emissor pode alterar após o login"
-                    : "Emissor definiu senha própria · Use 'Redefinir para Emissor123' se precisar recuperar o acesso"}
-                </p>
-              </>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>Nenhum emissor vinculado a esta organização.</p>
-                <button onClick={createIssuer}
-                  style={{ background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 6, padding: "7px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                  + Criar emissor padrão
-                </button>
-              </div>
-            )}
+                  <button type="button" onClick={() => copyToClipboard(`Login: ${issuerUser.email}\nSenha: ${issuerUser.password_is_default !== false ? "Emissor123" : "(personalizada)"}`, "ambos")}
+                    style={{ fontSize: 10, padding: "2px 8px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    {copiedField === "ambos" ? "✅ Copiado!" : "📋 Copiar tudo"}
+                  </button>
+                  <button type="button" onClick={resetIssuerPassword}
+                    style={{ fontSize: 10, padding: "2px 8px", background: "none", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 4, cursor: "pointer", whiteSpace: "nowrap", marginLeft: "auto" }}>
+                    Redefinir para Emissor123
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: 12, color: "#64748b" }}>Nenhum emissor vinculado.</span>
+                  <button type="button" onClick={createIssuer}
+                    style={{ fontSize: 11, padding: "3px 10px", background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 5, cursor: "pointer" }}>
+                    + Criar emissor padrão
+                  </button>
+                </>
+              )}
+            </div>
           </section>
 
           {/* ── KPIs ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
-            <OrgKpiMini label="Lotes" value={lots.length} />
-            <OrgKpiMini label="Emitidos" value={totalIssued} />
-            <OrgKpiMini label="Saldo" value={totalRemaining} />
+          <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 8, fontSize: 12 }}>
+            <span style={{ color: "#64748b" }}>Lotes:</span>
+            <strong style={{ color: "#1A3A5C" }}>{lots.length}</strong>
+            <span style={{ color: "#cbd5e1" }}>·</span>
+            <span style={{ color: "#64748b" }}>Emitidos:</span>
+            <strong style={{ color: "#1A3A5C" }}>{totalIssued}</strong>
+            <span style={{ color: "#cbd5e1" }}>·</span>
+            <span style={{ color: "#64748b" }}>Saldo:</span>
+            <strong style={{ color: "#16a34a" }}>{totalRemaining}</strong>
           </div>
 
           {/* ── Espelho Operacional ── */}
@@ -1223,189 +1152,85 @@ export default function OrganizationDetailsPage({
           )}
 
           {/* ── Tabs ── */}
-          <section className="card">
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12, borderBottom: "1px solid var(--line)", paddingBottom: 10 }}>
+          <section className="card" style={{ padding: "0" }}>
+            {/* Tab bar */}
+            <div style={{ display: "flex", gap: 0, borderBottom: "1px solid var(--line)" }}>
               {(["overview", "active", "revoked", "notes", "trash"] as TabKey[]).map((t) => {
                 const labels: Record<TabKey, string> = {
-                  overview: "Visão Geral",
-                  active: `Lotes Ativos${activeLots.length > 0 ? ` (${activeLots.length})` : ""}`,
-                  revoked: "Revogados",
-                  notes: `Anotações${notesList.length > 0 ? ` (${notesList.length})` : ""}`,
-                  trash: `Lixeira${(trashedLots.length + trashedCreds.length) > 0 ? ` (${trashedLots.length + trashedCreds.length})` : ""}`,
+                  overview: `Todos (${lots.length})`,
+                  active: `Ativos (${activeLots.length})`,
+                  revoked: `Revogados (${revokedLots.length})`,
+                  notes: `Anotações (${notesList.length})`,
+                  trash: `Lixeira (${trashedLots.length + trashedCreds.length})`,
                 };
                 return (
-                  <button
-                    key={t}
-                    onClick={() => setTab(t)}
-                    style={{
-                      fontSize: 12,
-                      padding: "5px 12px",
-                      borderRadius: 6,
-                      border: tab === t ? "1px solid var(--primary)" : "1px solid var(--line)",
-                      background: tab === t ? "rgba(91,45,142,0.1)" : "transparent",
-                      color: tab === t ? "var(--primary)" : "var(--muted)",
-                      fontWeight: tab === t ? 600 : 400,
-                      cursor: "pointer",
-                      transition: "all 0.15s",
-                    }}
-                  >
+                  <button key={t} onClick={() => setTab(t)} style={{
+                    fontSize: 11, padding: "7px 13px", border: "none", borderBottom: tab === t ? "2px solid #1A3A5C" : "2px solid transparent",
+                    background: "transparent", color: tab === t ? "#1A3A5C" : "#64748b", fontWeight: tab === t ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap",
+                  }}>
                     {labels[t]}
                   </button>
                 );
               })}
             </div>
 
-            {/* Overview */}
-            {tab === "overview" && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 8 }}>
-                {lots.map((l) => (
-                  <Link key={l.id} href={`/admin/lots/${l.id}`} style={{ textDecoration: "none" }}>
-                    <div style={{
-                      padding: "10px 12px",
-                      border: "1px solid var(--line)",
-                      borderRadius: 8,
-                      background: "var(--bg-soft)",
-                      transition: "border-color 0.15s, box-shadow 0.15s",
-                      cursor: "pointer",
-                    }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--primary)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 8px rgba(91,45,142,0.1)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--line)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>
-                          {l.title || `Lote #${l.id}`}
-                        </span>
-                        <span style={{
-                          padding: "2px 7px",
-                          borderRadius: 999,
-                          fontSize: 10,
-                          fontWeight: 600,
-                          background: `${getStatusColor(l.status)}18`,
-                          color: getStatusColor(l.status),
-                          border: `1px solid ${getStatusColor(l.status)}50`,
-                          whiteSpace: "nowrap",
-                          marginLeft: 8,
-                        }}>
-                          {getStatusLabel(l.status)}
-                        </span>
-                      </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 }}>
-                        <OrgLotStat label="Total" value={l.total_badges} />
-                        <OrgLotStat label="Emitidos" value={l.issued} />
-                        <OrgLotStat label="Saldo" value={l.remaining} />
-                      </div>
-                      {l.issue_window_days && (
-                        <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 5 }}>
-                          Janela: {l.issue_window_days} dias
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-                {!lots.length && (
-                  <div style={{ gridColumn: "1/-1", padding: "24px", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
-                    Nenhum lote cadastrado.{" "}
-                    <button className="btn-ghost" style={{ fontSize: 12, padding: "4px 10px", marginLeft: 6 }} onClick={openCreateLotForm}>
-                      + Criar primeiro lote
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+            <div style={{ padding: "10px 12px" }}>
 
-            {/* Active lots */}
-            {tab === "active" && (
-              <div style={{ display: "grid", gap: 6 }}>
-                {activeLots.map((l) => (
-                  <div key={l.id} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "9px 12px",
-                    border: "1px solid var(--line)",
-                    borderRadius: 8,
-                    background: "var(--card)",
-                  }}>
-                    <Link href={`/admin/lots/${l.id}`} style={{ flex: 1, textDecoration: "none" }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>
-                        {l.title || `Lote #${l.id}`}
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-                        Total {l.total_badges} · Emitidos {l.issued} · Saldo {l.remaining} · {l.issue_window_days || 0} dias
-                      </div>
-                    </Link>
-                    <span style={{
-                      padding: "2px 7px",
-                      borderRadius: 999,
-                      fontSize: 10,
-                      fontWeight: 600,
-                      background: `${getStatusColor(l.status)}18`,
-                      color: getStatusColor(l.status),
-                      border: `1px solid ${getStatusColor(l.status)}50`,
-                      whiteSpace: "nowrap",
-                    }}>
-                      {getStatusLabel(l.status)}
-                    </span>
-                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                      {l.status === "active" ? (
-                        <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => updateLot(l.id, { status: "paused" })}>Pausar</button>
-                      ) : (
-                        <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => updateLot(l.id, { status: "active" })}>Ativar</button>
-                      )}
-                      <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px" }} onClick={() => revokeLotFlow(l)}>Revogar</button>
-                      <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px", color: "#DC2626", borderColor: "#DC262640" }} onClick={() => moveLotToTrash(l)}>Lixeira</button>
-                    </div>
-                  </div>
-                ))}
-                {!activeLots.length && (
-                  <div style={{ textAlign: "center", color: "var(--muted)", padding: "20px 0", fontSize: 13 }}>
-                    Nenhum lote ativo.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Revoked lots */}
-            {tab === "revoked" && (
-              <div style={{ display: "grid", gap: 6 }}>
-                {revokedLots.map((l) => (
-                  <div key={l.id} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "9px 12px",
-                    border: "1px solid var(--line)",
-                    borderRadius: 8,
-                    background: "var(--card)",
-                  }}>
-                    <Link href={`/admin/lots/${l.id}`} style={{ flex: 1, textDecoration: "none" }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{l.title || `Lote #${l.id}`}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-                        Emitidos {l.issued} · Total {l.total_badges}
-                      </div>
-                    </Link>
-                    <span style={{
-                      padding: "2px 7px",
-                      borderRadius: 999,
-                      fontSize: 10,
-                      fontWeight: 600,
-                      background: `${getStatusColor(l.status)}18`,
-                      color: getStatusColor(l.status),
-                      border: `1px solid ${getStatusColor(l.status)}50`,
-                      whiteSpace: "nowrap",
-                    }}>
-                      {getStatusLabel(l.status)}
-                    </span>
-                    <button className="btn-ghost" style={{ fontSize: 11, padding: "3px 8px", flexShrink: 0 }} onClick={() => recoverLotFlow(l)}>Recuperar</button>
-                  </div>
-                ))}
-                {!revokedLots.length && (
-                  <div style={{ textAlign: "center", color: "var(--muted)", padding: "20px 0", fontSize: 13 }}>
-                    Nenhum lote revogado.
-                  </div>
-                )}
-              </div>
-            )}
+            {/* helper: tabela de lotes */}
+            {(tab === "overview" || tab === "active" || tab === "revoked") && (() => {
+              const rows = tab === "overview" ? lots : tab === "active" ? activeLots : revokedLots;
+              const empty = tab === "overview" ? "Nenhum lote cadastrado." : tab === "active" ? "Nenhum lote ativo." : "Nenhum lote revogado.";
+              if (!rows.length) return (
+                <div style={{ textAlign: "center", color: "var(--muted)", padding: "16px 0", fontSize: 13 }}>
+                  {empty}{tab === "overview" && <button className="btn-ghost" style={{ fontSize: 12, padding: "3px 9px", marginLeft: 8 }} onClick={openCreateLotForm}>+ Criar lote</button>}
+                </div>
+              );
+              return (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: "2px solid var(--line)" }}>
+                      {["Nome", "Total", "Emitidos", "Saldo", "Janela", "Validade", "Status", ""].map(h => (
+                        <th key={h} style={{ textAlign: h === "Total" || h === "Emitidos" || h === "Saldo" ? "right" : "left", padding: "4px 8px", color: "#64748b", fontWeight: 600, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.4px", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((l) => (
+                      <tr key={l.id} style={{ borderBottom: "1px solid var(--line)" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "#f8fafc")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                        <td style={{ padding: "5px 8px", maxWidth: 200 }}>
+                          <Link href={`/admin/lots/${l.id}`} style={{ textDecoration: "none", color: "#1A3A5C", fontWeight: 600, fontSize: 12 }}>{l.title || `Lote #${l.id}`}</Link>
+                        </td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: "#374151" }}>{l.total_badges}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", color: "#374151" }}>{l.issued}</td>
+                        <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: (l.remaining ?? 0) > 0 ? "#16a34a" : "#dc2626" }}>{l.remaining ?? 0}</td>
+                        <td style={{ padding: "5px 8px", color: "#64748b", whiteSpace: "nowrap" }}>{l.issue_window_days ? `${l.issue_window_days}d` : "—"}</td>
+                        <td style={{ padding: "5px 8px", color: "#64748b", whiteSpace: "nowrap", fontSize: 11 }}>
+                          {l.start_date || l.end_date ? `${l.start_date ? formatDateBR(l.start_date) : "?"} → ${l.end_date ? formatDateBR(l.end_date) : "∞"}` : "—"}
+                        </td>
+                        <td style={{ padding: "5px 8px" }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 999, background: `${getStatusColor(l.status)}18`, color: getStatusColor(l.status), border: `1px solid ${getStatusColor(l.status)}50`, whiteSpace: "nowrap" }}>
+                            {getStatusLabel(l.status)}
+                          </span>
+                        </td>
+                        <td style={{ padding: "5px 8px", whiteSpace: "nowrap" }}>
+                          <div style={{ display: "flex", gap: 3 }}>
+                            {tab !== "revoked" && (l.status === "active"
+                              ? <button className="btn-ghost" style={{ fontSize: 10, padding: "2px 6px" }} onClick={() => updateLot(l.id, { status: "paused" })}>Pausar</button>
+                              : l.status === "paused" ? <button className="btn-ghost" style={{ fontSize: 10, padding: "2px 6px" }} onClick={() => updateLot(l.id, { status: "active" })}>Ativar</button> : null
+                            )}
+                            {tab !== "revoked" && <button className="btn-ghost" style={{ fontSize: 10, padding: "2px 6px" }} onClick={() => revokeLotFlow(l)}>Revogar</button>}
+                            {tab === "revoked" && <button className="btn-ghost" style={{ fontSize: 10, padding: "2px 6px" }} onClick={() => recoverLotFlow(l)}>Recuperar</button>}
+                            {tab !== "revoked" && <button className="btn-ghost" style={{ fontSize: 10, padding: "2px 6px", color: "#DC2626", borderColor: "#DC262640" }} onClick={() => moveLotToTrash(l)}>Lixeira</button>}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              );
+            })()}
 
             {/* Notes */}
             {tab === "notes" && (
@@ -1573,12 +1398,14 @@ export default function OrganizationDetailsPage({
                 )}
 
                 {trashedLots.length === 0 && trashedCreds.length === 0 && org.status !== "trashed" && (
-                  <div style={{ textAlign: "center", color: "var(--muted)", padding: "20px 0", fontSize: 13 }}>
+                  <div style={{ textAlign: "center", color: "var(--muted)", padding: "16px 0", fontSize: 13 }}>
                     Lixeira vazia.
                   </div>
                 )}
               </div>
             )}
+
+            </div>{/* /padding wrapper */}
           </section>
         </>
       )}
