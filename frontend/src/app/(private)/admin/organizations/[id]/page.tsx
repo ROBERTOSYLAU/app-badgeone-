@@ -1048,20 +1048,14 @@ export default function OrganizationDetailsPage({
                         </div>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--bg-soft)", borderRadius: 7, padding: "9px 10px", border: "1px solid var(--line)", minHeight: 38 }}>
-                        <code style={{ fontSize: 13, color: "#1A3A5C", fontWeight: 700, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {showIssuerLogin
-                            ? (issuerUser.email ? String(issuerUser.email) : "⚠ email não carregado")
-                            : "••••••••••••••••••"}
-                        </code>
-                        <button onClick={() => setShowIssuerLogin((v) => !v)}
-                          title={showIssuerLogin ? "Ocultar login" : "Mostrar login"}
-                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, padding: "0 2px", flexShrink: 0, opacity: 0.6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", background: "#f0f4f8", borderRadius: 7, border: "1px solid #ddd", minHeight: 38 }}>
+                        <span style={{ fontSize: 13, color: "#1A3A5C", fontWeight: 600, flex: 1 }}>
+                          {showIssuerLogin ? (issuerUser?.email || "sem email") : "••••••••••••••••••"}
+                        </span>
+                        <button type="button" onClick={() => setShowIssuerLogin(v => !v)} style={{ background: "none", border: "none", cursor: "pointer" }}>
                           {showIssuerLogin ? "🙈" : "👁️"}
                         </button>
-                        <button onClick={() => copyToClipboard(issuerUser.email, "email")}
-                          title="Copiar login"
-                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: "0 2px", flexShrink: 0 }}>
+                        <button type="button" onClick={() => copyToClipboard(issuerUser.email, "email")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>
                           {copiedField === "email" ? "✅" : "📋"}
                         </button>
                       </div>
