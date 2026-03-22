@@ -140,48 +140,38 @@ function AdminSidebar() {
         Sair
       </button>
 
+      {/* Dark mode toggle — logo abaixo do Sair */}
+      <button
+        onClick={toggleDark}
+        title={dark ? "Modo claro" : "Modo escuro"}
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          borderRadius: 6,
+          padding: "5px 8px",
+          cursor: "pointer",
+          color: "rgba(255,255,255,0.55)",
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+          width: "100%",
+        }}
+      >
+        <span style={{ fontSize: 14 }}>{dark ? "☀️" : "🌙"}</span>
+        <span style={{ fontSize: 11 }}>{dark ? "Claro" : "Escuro"}</span>
+      </button>
+
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* User info + dark toggle at bottom */}
-      <div
-        style={{
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          paddingTop: 10,
-          display: "grid",
-          gap: 8,
-        }}
-      >
-        <div>
-          <div style={{ color: "#fff", fontWeight: 600, fontSize: 12 }}>
-            {user?.name || "Admin"}
-          </div>
-          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
-            {user?.organization_name || "Administrador"}
-          </div>
+      {/* User info at very bottom */}
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10 }}>
+        <div style={{ color: "#fff", fontWeight: 600, fontSize: 12 }}>
+          {user?.name || "Admin"}
         </div>
-
-        {/* Dark mode toggle — small, discrete */}
-        <button
-          onClick={toggleDark}
-          title={dark ? "Modo claro" : "Modo escuro"}
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 6,
-            padding: "5px 8px",
-            cursor: "pointer",
-            fontSize: 12,
-            color: "rgba(255,255,255,0.6)",
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            width: "100%",
-          }}
-        >
-          <span style={{ fontSize: 14 }}>{dark ? "☀️" : "🌙"}</span>
-          <span style={{ fontSize: 11 }}>{dark ? "Claro" : "Escuro"}</span>
-        </button>
+        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
+          {user?.organization_name || "Administrador"}
+        </div>
       </div>
     </aside>
   );

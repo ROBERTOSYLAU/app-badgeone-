@@ -13,5 +13,7 @@ class BadgeLot(Base):
     total_badges = Column(Integer, nullable=False)
     issued = Column(Integer, nullable=False, default=0)
     issue_window_days = Column(Integer, nullable=False, default=365)
+    start_date = Column(DateTime(timezone=True), nullable=True)
+    end_date = Column(DateTime(timezone=True), nullable=True)
     status = Column(String(20), nullable=False, default="active")
     created_at = Column(DateTime(timezone=True), server_default=func.now())

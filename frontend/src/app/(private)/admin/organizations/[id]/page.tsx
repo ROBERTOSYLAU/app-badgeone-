@@ -27,6 +27,8 @@ type Lot = {
   issued: number;
   remaining: number;
   issue_window_days?: number;
+  start_date?: string | null;
+  end_date?: string | null;
   status: string;
   created_at?: string;
 };
@@ -593,6 +595,8 @@ export default function OrganizationDetailsPage({
         description: lotDescription.trim(),
         total_badges: qty,
         issue_window_days: issueWindow,
+        start_date: lotValidityMode === "range" ? lotRangeStart || undefined : undefined,
+        end_date: lotValidityMode === "range" ? lotRangeEnd || undefined : undefined,
       });
 
       setMessage("Lote criado com sucesso!");

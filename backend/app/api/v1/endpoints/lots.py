@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from datetime import datetime
 
 from app.core.auth import require_admin, require_issuer_or_admin
 from app.models.user import User
@@ -19,6 +20,8 @@ class LotCreate(BaseModel):
     description: str | None = None
     total_badges: int
     issue_window_days: int = 365
+    start_date: str | None = None
+    end_date: str | None = None
 
 
 class LotUpdate(BaseModel):
@@ -26,6 +29,9 @@ class LotUpdate(BaseModel):
     description: str | None = None
     total_badges: int | None = None
     status: str | None = None
+    issue_window_days: int | None = None
+    start_date: str | None = None
+    end_date: str | None = None
 
 
 class LotRevokeRequest(BaseModel):
@@ -61,6 +67,25 @@ def _safe_created_at(obj):
         return value.isoformat() if value else None
     except Exception:
         return None
+
+
+def _safe_dt(obj, field: str):
+    try:
+        value = getattr(obj, field, None)
+        return value.isoformat() if value else None
+    except Exception:
+        return None
+
+
+def _parse_dt(value: str | None):
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    return None
 
 
 def ensure_lot_columns(db: Session):
@@ -101,6 +126,16 @@ def ensure_lot_columns(db: Session):
                     ADD COLUMN created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                     """
                 )
+            )
+
+        if "start_date" not in existing_columns:
+            db.execute(
+                text(f"ALTER TABLE {table_name} ADD COLUMN start_date TIMESTAMP WITH TIME ZONE")
+            )
+
+        if "end_date" not in existing_columns:
+            db.execute(
+                text(f"ALTER TABLE {table_name} ADD COLUMN end_date TIMESTAMP WITH TIME ZONE")
             )
 
         db.commit()
@@ -144,6 +179,14 @@ def create_lot(
       raise HTTPException(status_code=400, detail="Não é possível criar lote para organização na lixeira")
 
     try:
+        start_dt = _parse_dt(payload.start_date)
+        end_dt = _parse_dt(payload.end_date)
+
+        # Auto-compute days from date range if provided
+        issue_days = payload.issue_window_days
+        if start_dt and end_dt and end_dt > start_dt:
+            issue_days = max(1, (end_dt - start_dt).days)
+
         lot = BadgeLot(
             organization_id=payload.organization_id,
             title=(payload.title or "").strip() or None,
@@ -154,7 +197,11 @@ def create_lot(
         )
 
         if hasattr(lot, "issue_window_days"):
-            lot.issue_window_days = payload.issue_window_days
+            lot.issue_window_days = issue_days
+        if hasattr(lot, "start_date"):
+            lot.start_date = start_dt
+        if hasattr(lot, "end_date"):
+            lot.end_date = end_dt
 
         db.add(lot)
         db.flush()
@@ -179,6 +226,8 @@ def create_lot(
             "issued": lot.issued,
             "remaining": _remaining(lot),
             "issue_window_days": _safe_issue_window_days(lot),
+            "start_date": _safe_dt(lot, "start_date"),
+            "end_date": _safe_dt(lot, "end_date"),
             "status": lot.status,
             "created_at": _safe_created_at(lot),
         }
@@ -221,6 +270,26 @@ def update_lot(
             raise HTTPException(status_code=400, detail="Status inválido")
         lot.status = payload.status
 
+    if payload.issue_window_days is not None:
+        lot.issue_window_days = payload.issue_window_days
+
+    if payload.start_date is not None:
+        start_dt = _parse_dt(payload.start_date)
+        if hasattr(lot, "start_date"):
+            lot.start_date = start_dt
+
+    if payload.end_date is not None:
+        end_dt = _parse_dt(payload.end_date)
+        if hasattr(lot, "end_date"):
+            lot.end_date = end_dt
+
+    # Auto-compute days if both dates provided
+    if payload.start_date and payload.end_date:
+        s = _parse_dt(payload.start_date)
+        e = _parse_dt(payload.end_date)
+        if s and e and e > s:
+            lot.issue_window_days = max(1, (e - s).days)
+
     after = f"title={lot.title}, total={lot.total_badges}, status={lot.status}"
 
     if before != after:
@@ -238,6 +307,8 @@ def update_lot(
         "issued": lot.issued,
         "remaining": _remaining(lot),
         "issue_window_days": _safe_issue_window_days(lot),
+        "start_date": _safe_dt(lot, "start_date"),
+        "end_date": _safe_dt(lot, "end_date"),
         "status": lot.status,
         "created_at": _safe_created_at(lot),
     }
@@ -371,6 +442,8 @@ def list_lots(
             "issued": x.issued,
             "remaining": _remaining(x),
             "issue_window_days": _safe_issue_window_days(x),
+            "start_date": _safe_dt(x, "start_date"),
+            "end_date": _safe_dt(x, "end_date"),
             "status": x.status,
             "created_at": _safe_created_at(x),
         }
