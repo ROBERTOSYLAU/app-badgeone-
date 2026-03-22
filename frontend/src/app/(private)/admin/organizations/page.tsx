@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiDelete, apiGet, apiPost } from "../../../../lib/api";
 import { useAuth } from "../../../../lib/auth-context";
+import { logAction } from "../../../../lib/history";
 
 type Org = {
   id: number;
@@ -276,6 +277,7 @@ export default function AdminOrganizationsPage() {
 
     try {
       await apiDelete(`/api/v1/organizations/${id}`);
+      logAction("Org enviada para lixeira", `ID ${id}`);
       setMessage("Organização movida para a lixeira.");
       await loadOrgs();
     } catch (e) {
@@ -290,6 +292,7 @@ export default function AdminOrganizationsPage() {
 
     try {
       await apiPost(`/api/v1/organizations/${id}/restore`, {});
+      logAction("Org restaurada", `ID ${id}`);
       setMessage("Organização restaurada com sucesso.");
       await loadOrgs();
       setStatus("all");
@@ -307,6 +310,7 @@ export default function AdminOrganizationsPage() {
 
     try {
       await apiDelete(`/api/v1/organizations/${id}?force=true`);
+      logAction("Org excluída permanentemente", `ID ${id} · ${orgName}`);
       setMessage("Organização excluída permanentemente.");
       await loadOrgs();
     } catch (e) {
@@ -365,6 +369,7 @@ export default function AdminOrganizationsPage() {
       };
 
       await apiPost("/api/v1/organizations", payload);
+      logAction("Organização criada", payload.name);
       setMessage("Organização criada com sucesso!");
       setShowForm(false);
       await loadOrgs();
@@ -416,7 +421,7 @@ export default function AdminOrganizationsPage() {
     <main className="container">
       <div className="header-row">
         <div>
-          <h1 style={{ color: "#5B2D8E" }}>Organizações</h1>
+          <h1 style={{ color: "var(--primary)" }}>Organizações</h1>
           <p className="muted">
             {orgs.length} total · {totalAtivas} ativas · {totalInativas} inativas · {totalLixeira} na lixeira
           </p>
@@ -587,8 +592,8 @@ export default function AdminOrganizationsPage() {
                 className="card"
                 style={{
                   marginBottom: 0,
-                  background: "#fff",
-                  border: "1px solid #E8E8E8",
+                  background: "var(--card)",
+                  border: "1px solid var(--line)",
                   padding: "9px 12px",
                 }}
               >
@@ -605,12 +610,12 @@ export default function AdminOrganizationsPage() {
                     href={`/admin/organizations/${o.id}`}
                     style={{
                       textDecoration: "none",
-                      color: "#1A1A1A",
+                      color: "var(--text)",
                       display: "grid",
                       gap: 2,
                     }}
                   >
-                    <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3, color: "#5B2D8E" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3, color: "var(--primary)" }}>
                       {o.name}
                     </div>
                     <div className="muted" style={{ fontSize: 11 }}>ID {o.id}</div>
@@ -618,11 +623,11 @@ export default function AdminOrganizationsPage() {
 
                   <div style={{ display: "grid", gap: 2, fontSize: 12 }}>
                     <div>
-                      <strong style={{ color: "#6B7280", fontWeight: 500 }}>CNPJ: </strong>
+                      <strong style={{ color: "var(--muted)", fontWeight: 500 }}>CNPJ: </strong>
                       <span className="muted">{o.document || "—"}</span>
                     </div>
                     <div>
-                      <strong style={{ color: "#6B7280", fontWeight: 500 }}>Abertura: </strong>
+                      <strong style={{ color: "var(--muted)", fontWeight: 500 }}>Abertura: </strong>
                       <span className="muted">
                         {formatDateBR(o.opening_date) || "—"}
                       </span>
@@ -631,11 +636,11 @@ export default function AdminOrganizationsPage() {
 
                   <div style={{ display: "grid", gap: 2, fontSize: 12 }}>
                     <div>
-                      <strong style={{ color: "#6B7280", fontWeight: 500 }}>CNAE: </strong>
+                      <strong style={{ color: "var(--muted)", fontWeight: 500 }}>CNAE: </strong>
                       <span className="muted">{shortText(o.cnae || "—", 60)}</span>
                     </div>
                     <div>
-                      <strong style={{ color: "#6B7280", fontWeight: 500 }}>Endereço: </strong>
+                      <strong style={{ color: "var(--muted)", fontWeight: 500 }}>Endereço: </strong>
                       <span className="muted">
                         {shortText(o.address || "—", 68)}
                       </span>
@@ -666,7 +671,7 @@ export default function AdminOrganizationsPage() {
                           </button>
                           <button
                             className="btn-ghost"
-                            style={{ fontSize: 11, padding: "4px 8px", color: "#DC2626", borderColor: "#DC262640" }}
+                            style={{ fontSize: 11, padding: "4px 8px", color: "var(--danger)", borderColor: "rgba(220,38,38,0.3)" }}
                             onClick={() => permanentlyDeleteOrg(o.id, o.name)}
                           >
                             Excluir
