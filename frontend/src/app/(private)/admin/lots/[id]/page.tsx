@@ -228,9 +228,6 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
           <Link href={`/admin/organizations/${lot.organization_id}`} style={{ ...btnGhost, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
             🏢 Organização
           </Link>
-          <button onClick={openEdit} style={{ ...btnGhost, ...(editing ? { background: "rgba(91,45,142,0.1)", color: "var(--primary)", borderColor: "rgba(91,45,142,0.3)" } : {}) }}>
-            {editing ? "✕ Cancelar" : "✏️ Editar"}
-          </button>
         </div>
       </div>
 
@@ -333,7 +330,7 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
               {lot.created_at && <InfoRow label="Criado em" value={fmtDt(lot.created_at)} />}
             </div>
             <button onClick={openEdit} style={{ ...btnGhost, marginTop: 14, fontSize: 12 }}>
-              ✏️ Editar estas informações
+              ✏️ Editar Lote
             </button>
           </div>
         )}

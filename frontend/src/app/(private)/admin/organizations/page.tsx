@@ -209,7 +209,7 @@ export default function AdminOrganizationsPage() {
   const { user, isLoading } = useAuth();
 
   const [orgs, setOrgs] = useState<Org[]>([]);
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState("active");
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
 
