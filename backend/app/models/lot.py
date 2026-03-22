@@ -17,3 +17,5 @@ class BadgeLot(Base):
     end_date = Column(DateTime(timezone=True), nullable=True)
     status = Column(String(20), nullable=False, default="active")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    original_title = Column(String(180), nullable=True)
+    display_title = Column(String(180), nullable=True)

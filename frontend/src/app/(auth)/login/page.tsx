@@ -289,7 +289,10 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="lp-card-footer">
+            <div className="lp-card-footer" style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
+              <Link href="/forgot-password" style={{ fontSize: 12, color: "#6b7280", textDecoration: "none" }}>
+                Esqueci meu acesso
+              </Link>
               <Link href="/" className="lp-back-link">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m15 18-6-6 6-6" />

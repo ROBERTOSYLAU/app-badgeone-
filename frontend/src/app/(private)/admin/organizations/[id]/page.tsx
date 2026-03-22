@@ -70,6 +70,13 @@ type CnpjLookup = {
 
 type TabKey = "overview" | "active" | "revoked" | "notes" | "trash";
 
+type IssuerUser = {
+  id: number;
+  name: string;
+  email: string;
+  status: string;
+};
+
 function getStatusColor(status: string) {
   switch (status) {
     case "active":
@@ -164,7 +171,9 @@ export default function OrganizationDetailsPage({
   const [lots, setLots] = useState<Lot[]>([]);
   const [notesList, setNotesList] = useState<Note[]>([]);
   const [credentials, setCredentials] = useState<Cred[]>([]);
+  const [issuerUser, setIssuerUser] = useState<IssuerUser | null>(null);
   const [tab, setTab] = useState<TabKey>("overview");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [noteTitle, setNoteTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState("");
@@ -208,11 +217,12 @@ export default function OrganizationDetailsPage({
   }
 
   async function loadAll() {
-    const [orgsRes, lotsRes, notesRes, credsRes] = await Promise.allSettled([
+    const [orgsRes, lotsRes, notesRes, credsRes, usersRes] = await Promise.allSettled([
       apiGet("/api/v1/organizations"),
       apiGet("/api/v1/lots"),
       apiGet(`/api/v1/organization-notes/${orgId}`),
       apiGet(`/api/v1/credentials?organization_id=${orgId}`),
+      apiGet(`/api/v1/users?organization_id=${orgId}`),
     ]);
 
     if (orgsRes.status === "fulfilled") {
@@ -245,6 +255,29 @@ export default function OrganizationDetailsPage({
     } else {
       console.error("Erro ao carregar credenciais:", credsRes.reason);
       setCredentials([]);
+    }
+
+    if (usersRes.status === "fulfilled") {
+      const issuer = ((usersRes.value as IssuerUser[]) || []).find((u) => (u as any).role === "issuer") || null;
+      setIssuerUser(issuer);
+    }
+  }
+
+  function copyToClipboard(text: string, field: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    });
+  }
+
+  async function resetIssuerPassword() {
+    if (!issuerUser) return;
+    if (!confirm(`Redefinir a senha de "${issuerUser.email}" para Emissor123?`)) return;
+    try {
+      await apiPost(`/api/v1/users/${issuerUser.id}/reset-password`, {});
+      setMessage("Senha redefinida para Emissor123.");
+    } catch (e) {
+      setApiError("Erro ao redefinir senha.", e);
     }
   }
 
@@ -618,6 +651,13 @@ export default function OrganizationDetailsPage({
   const totalIssued = useMemo(() => lots.reduce((a, b) => a + (b.issued || 0), 0), [lots]);
   const totalRemaining = useMemo(() => lots.reduce((a, b) => a + (b.remaining || 0), 0), [lots]);
 
+  function maskName(name: string): string {
+    if (!name) return "***";
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0][0] + "***";
+    return `${parts[0]} ${"*".repeat(parts[parts.length - 1].length)}`;
+  }
+
   return (
     <main className="container">
       {/* ── Header ── */}
@@ -876,12 +916,149 @@ export default function OrganizationDetailsPage({
             </div>
           </section>
 
+          {/* ── Acesso Emissor ── */}
+          <section style={{ marginBottom: 10, background: "var(--card, #fff)", border: "1px solid var(--line)", borderRadius: 10, padding: "16px 20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ background: "#1A3A5C", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 6, letterSpacing: "0.5px" }}>
+                  ACESSO EMISSOR
+                </span>
+                {issuerUser && (
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
+                    background: issuerUser.status === "active" ? "#dcfce7" : "#fee2e2",
+                    color: issuerUser.status === "active" ? "#166534" : "#991b1b",
+                    border: `1px solid ${issuerUser.status === "active" ? "#86efac" : "#fca5a5"}`,
+                  }}>
+                    {issuerUser.status === "active" ? "● Ativo" : "● Inativo"}
+                  </span>
+                )}
+              </div>
+              {issuerUser && (
+                <button onClick={resetIssuerPassword}
+                  style={{ background: "none", border: "1px solid #fca5a5", color: "#dc2626", borderRadius: 6, padding: "4px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                  Redefinir senha
+                </button>
+              )}
+            </div>
+
+            {issuerUser ? (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 10, alignItems: "end" }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 5 }}>Login</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg-soft)", borderRadius: 7, padding: "8px 12px", border: "1px solid var(--line)" }}>
+                    <code style={{ fontSize: 13, color: "var(--primary)", fontWeight: 600, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {issuerUser.email}
+                    </code>
+                    <button onClick={() => copyToClipboard(issuerUser.email, "email")}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, padding: "0 2px", flexShrink: 0 }}>
+                      {copiedField === "email" ? "✅" : "📋"}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 5 }}>Senha padrão</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg-soft)", borderRadius: 7, padding: "8px 12px", border: "1px solid var(--line)" }}>
+                    <code style={{ fontSize: 15, color: "#16a34a", fontWeight: 700, flex: 1, letterSpacing: "1px" }}>Emissor123</code>
+                    <button onClick={() => copyToClipboard("Emissor123", "senha")}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, padding: "0 2px", flexShrink: 0 }}>
+                      {copiedField === "senha" ? "✅" : "📋"}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <button
+                    onClick={() => copyToClipboard(`Login: ${issuerUser.email}\nSenha: Emissor123`, "ambos")}
+                    style={{ background: "#1A3A5C", color: "#fff", border: "none", borderRadius: 7, padding: "9px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+                    {copiedField === "ambos" ? "✅ Copiado!" : "📋 Copiar tudo"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: "var(--muted)" }}>Nenhum emissor vinculado.</p>
+            )}
+            {issuerUser && (
+              <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 8 }}>
+                O emissor pode alterar e-mail e senha após o primeiro acesso · Senha exibida é a padrão de primeiro acesso
+              </p>
+            )}
+          </section>
+
           {/* ── KPIs ── */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
             <OrgKpiMini label="Lotes" value={lots.length} />
             <OrgKpiMini label="Emitidos" value={totalIssued} />
             <OrgKpiMini label="Saldo" value={totalRemaining} />
           </div>
+
+          {/* ── Espelho Operacional ── */}
+          {credentials.length > 0 && (
+            <section className="card" style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ background: "#0f766e", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 6 }}>
+                    ESPELHO OPERACIONAL
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>últimas emissões · dados controlados por LGPD</span>
+                </div>
+                <span style={{ fontSize: 11, color: "var(--muted)" }}>{credentials.length} emissão{credentials.length !== 1 ? "ões" : ""}</span>
+              </div>
+
+              {/* Stats row */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 14 }}>
+                {[
+                  { label: "Total emitido", value: credentials.length, color: "#1A3A5C" },
+                  { label: "Válidas", value: credentials.filter((c: Cred) => c.status === "valid").length, color: "#16a34a" },
+                  { label: "Retificadas", value: credentials.filter((c: Cred) => c.status === "rectified").length, color: "#d97706" },
+                  { label: "Revogadas", value: credentials.filter((c: Cred) => c.status === "revoked").length, color: "#dc2626" },
+                ].map(s => (
+                  <div key={s.label} style={{ background: "var(--bg-soft)", borderRadius: 8, padding: "10px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Table - últimas 10 */}
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--line)" }}>
+                      {["Destinatário", "Certificação", "Status", "ID Público"].map(h => (
+                        <th key={h} style={{ textAlign: "left", padding: "6px 10px", color: "var(--muted)", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {credentials.slice(0, 10).map((c: Cred) => (
+                      <tr key={c.id} style={{ borderBottom: "1px solid var(--line)", transition: "background 0.1s" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-soft)")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                        <td style={{ padding: "8px 10px", color: "var(--text)" }}>
+                          {maskName(c.recipient_name)}
+                        </td>
+                        <td style={{ padding: "8px 10px", color: "var(--muted)" }}>
+                          {c.course_name}
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 999,
+                            background: c.status === "valid" ? "#dcfce7" : c.status === "rectified" ? "#fef9c3" : c.status === "revoked" ? "#fee2e2" : "#f3f4f6",
+                            color: c.status === "valid" ? "#166534" : c.status === "rectified" ? "#854d0e" : c.status === "revoked" ? "#991b1b" : "#6b7280",
+                          }}>
+                            {c.status === "valid" ? "Válida" : c.status === "rectified" ? "Retificada" : c.status === "revoked" ? "Revogada" : c.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: "8px 10px" }}>
+                          <code style={{ fontSize: 10, color: "var(--muted)" }}>{c.public_id}</code>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           {/* ── Tabs ── */}
           <section className="card">

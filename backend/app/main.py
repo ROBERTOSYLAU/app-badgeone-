@@ -42,6 +42,13 @@ def startup():
             conn.execute(text("ALTER TABLE badge_lots ADD COLUMN IF NOT EXISTS title VARCHAR(180)"))
             conn.execute(text("ALTER TABLE badge_lots ADD COLUMN IF NOT EXISTS description VARCHAR(500)"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token VARCHAR(64)"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMP WITH TIME ZONE"))
+            conn.execute(text("ALTER TABLE badge_lots ADD COLUMN IF NOT EXISTS original_title VARCHAR(180)"))
+            conn.execute(text("ALTER TABLE badge_lots ADD COLUMN IF NOT EXISTS display_title VARCHAR(180)"))
+            conn.execute(text("ALTER TABLE credentials ADD COLUMN IF NOT EXISTS issued_by_user_id INTEGER"))
+            conn.execute(text("ALTER TABLE credentials ADD COLUMN IF NOT EXISTS recipient_cpf VARCHAR(14)"))
+            conn.execute(text("ALTER TABLE credentials ADD COLUMN IF NOT EXISTS rectification_note VARCHAR(500)"))
             print("✅ Database migrations completed successfully")
     except Exception as e:
         print(f"⚠️ Migration warning (may already exist): {e}")

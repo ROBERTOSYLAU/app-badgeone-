@@ -18,5 +18,8 @@ class Credential(Base):
     tx_hash = Column(String(100), nullable=True)
     token_id = Column(String(80), nullable=True)
 
+    issued_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    recipient_cpf = Column(String(14), nullable=True)
     status = Column(String(20), nullable=False, default="valid")
+    rectification_note = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

@@ -13,6 +13,7 @@ from app.models.organization import Organization
 from app.models.lot import BadgeLot
 from app.models.credential import Credential
 from app.models.organization_note import OrganizationNote
+from app.core.security import hash_password
 
 router = APIRouter()
 
@@ -148,6 +149,20 @@ def create_org(
         db.commit()
         db.refresh(org)
 
+        # Auto-create default issuer user for this org
+        issuer_email = f"emissor{org.id}@badgeone.com.br"
+        if not db.query(User).filter(User.email == issuer_email).first():
+            issuer = User(
+                email=issuer_email,
+                name=f"Emissor {org.name}",
+                password_hash=hash_password("Emissor123"),
+                role="issuer",
+                status="active",
+                organization_id=org.id,
+            )
+            db.add(issuer)
+            db.commit()
+
         return {
             "id": org.id,
             "name": org.name,
@@ -157,6 +172,8 @@ def create_org(
             "cnae": org.cnae,
             "opening_date": org.opening_date,
             "regime": org.regime,
+            "issuer_email": issuer_email,
+            "issuer_password_default": "Emissor123",
         }
 
     except HTTPException:

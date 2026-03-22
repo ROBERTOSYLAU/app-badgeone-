@@ -1,3 +1,6 @@
+import secrets
+from datetime import datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -149,6 +152,43 @@ def onboarding_status(db: Session = Depends(get_db), user: User = Depends(requir
     }
 
 
+class SeedIssuerRequest(BaseModel):
+    email: EmailStr = "issuer@badgeone.com.br"
+    password: str = "Admin@123"
+    name: str = "Badge One Emissor"
+    org_name: str = "Badge One Org"
+
+
+@router.post("/seed-issuer")
+def seed_issuer(payload: SeedIssuerRequest, db: Session = Depends(get_db)):
+    if settings.app_env == "production":
+        raise HTTPException(status_code=403, detail="Seed issuer desabilitado em produção")
+
+    # Create or find org
+    org = db.query(Organization).filter(Organization.name == payload.org_name).first()
+    if not org:
+        org = Organization(name=payload.org_name, status="active")
+        db.add(org)
+        db.commit()
+        db.refresh(org)
+
+    existing = db.query(User).filter(User.email == payload.email).first()
+    if existing:
+        return {"ok": True, "message": "issuer already exists", "email": existing.email, "organization_id": org.id}
+
+    user = User(
+        email=payload.email,
+        name=payload.name,
+        password_hash=hash_password(payload.password),
+        role="issuer",
+        organization_id=org.id,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {"ok": True, "id": user.id, "email": user.email, "organization_id": org.id}
+
+
 @router.post("/reset-admin")
 def reset_admin(payload: SeedAdminRequest, db: Session = Depends(get_db)):
     if settings.app_env == "production":
@@ -175,3 +215,81 @@ def reset_admin(payload: SeedAdminRequest, db: Session = Depends(get_db)):
     db.refresh(user)
 
     return {"ok": True, "message": "admin criado", "email": user.email}
+
+
+# ── Troca de senha/email (usuário autenticado) ──────────────────────────────
+
+class UpdateMeRequest(BaseModel):
+    email: EmailStr | None = None
+    current_password: str
+    new_password: str | None = None
+
+
+@router.put("/me")
+def update_me(payload: UpdateMeRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not verify_password(payload.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+
+    if payload.email and payload.email != current_user.email:
+        if db.query(User).filter(User.email == payload.email, User.id != current_user.id).first():
+            raise HTTPException(status_code=409, detail="E-mail já está em uso")
+        current_user.email = payload.email
+
+    if payload.new_password:
+        if len(payload.new_password) < 6:
+            raise HTTPException(status_code=400, detail="Nova senha deve ter no mínimo 6 caracteres")
+        current_user.password_hash = hash_password(payload.new_password)
+
+    db.commit()
+    return {"ok": True, "email": current_user.email}
+
+
+# ── Esqueci minha senha ──────────────────────────────────────────────────────
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+    # Always return ok to avoid email enumeration
+    if not user:
+        return {"ok": True, "message": "Se o e-mail estiver cadastrado, você receberá o link."}
+
+    token = secrets.token_urlsafe(32)
+    user.password_reset_token = token
+    user.password_reset_expires = datetime.utcnow() + timedelta(hours=2)
+    db.commit()
+
+    return {
+        "ok": True,
+        "message": "Link de redefinição gerado.",
+        "reset_token": token,  # Em produção, enviar por e-mail
+        "expires_in": "2 horas",
+    }
+
+
+@router.post("/reset-password")
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    if len(payload.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Senha deve ter no mínimo 6 caracteres")
+
+    user = db.query(User).filter(User.password_reset_token == payload.token).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Token inválido ou já utilizado")
+
+    if user.password_reset_expires and datetime.utcnow() > user.password_reset_expires:
+        raise HTTPException(status_code=400, detail="Token expirado. Solicite um novo link.")
+
+    user.password_hash = hash_password(payload.new_password)
+    user.password_reset_token = None
+    user.password_reset_expires = None
+    db.commit()
+
+    return {"ok": True, "message": "Senha redefinida com sucesso"}

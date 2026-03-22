@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     auth_cookie_secure: bool = False
     auth_cookie_samesite: str = "lax"
 
+    # Polygon / blockchain
+    polygon_rpc_url: str = "https://polygon-rpc.com"
+    polygon_private_key: str = ""
+    polygon_contract_address: str = ""
+    polygonscan_api_key: str = ""
+    badge_verify_base_url: str = "https://app.badgeone.com.br/verify"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

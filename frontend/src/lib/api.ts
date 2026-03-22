@@ -89,6 +89,26 @@ export async function apiDelete(path: string) {
   return parseResponse(res);
 }
 
+export async function apiPut(path: string, body: unknown) {
+  const token = getToken();
+
+  const res = await fetch(apiUrl(path), {
+    method: "PUT",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw new Error(await buildErrorMessage("PUT", path, res));
+  }
+
+  return parseResponse(res);
+}
+
 export async function apiPatch(path: string, body: unknown) {
   const token = getToken();
 

@@ -34,6 +34,11 @@ services:
       REDIS_URL: redis://redis:6379
       APP_ENV: production
       JWT_SECRET: ${JWT_SECRET:-badgeone-super-secret-key-change-in-production-2024}
+      POLYGON_RPC_URL: ${POLYGON_RPC_URL:-https://polygon-rpc.com}
+      POLYGON_PRIVATE_KEY: ${POLYGON_PRIVATE_KEY:-}
+      POLYGON_CONTRACT_ADDRESS: ${POLYGON_CONTRACT_ADDRESS:-}
+      POLYGONSCAN_API_KEY: ${POLYGONSCAN_API_KEY:-}
+      BADGE_VERIFY_BASE_URL: ${BADGE_VERIFY_BASE_URL:-https://app.badgeone.com.br/verify}
 
   frontend:
     build: ./frontend

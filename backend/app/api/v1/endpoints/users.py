@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
@@ -59,8 +59,15 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db), _=Depends(re
 
 
 @router.get("")
-def list_users(db: Session = Depends(get_db), _=Depends(require_admin)):
-    users = db.query(User).order_by(User.id.desc()).all()
+def list_users(
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+    organization_id: int | None = Query(default=None),
+):
+    q = db.query(User).order_by(User.id.desc())
+    if organization_id is not None:
+        q = q.filter(User.organization_id == organization_id)
+    users = q.all()
     return [
         {
             "id": u.id,
@@ -72,3 +79,20 @@ def list_users(db: Session = Depends(get_db), _=Depends(require_admin)):
         }
         for u in users
     ]
+
+
+@router.post("/{user_id}/reset-password")
+def admin_reset_user_password(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    """Admin redefine a senha do emissor para o padrão Emissor123."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    user.password_hash = hash_password("Emissor123")
+    user.password_reset_token = None
+    user.password_reset_expires = None
+    db.commit()
+    return {"ok": True, "message": "Senha redefinida para Emissor123"}

@@ -653,6 +653,19 @@ export default function AdminOrganizationsPage() {
                         {shortText(o.address || "—", 68)}
                       </span>
                     </div>
+                    <div style={{ marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 12 }}>🔐</span>
+                      <code style={{ fontSize: 11, color: "var(--primary)", fontWeight: 500 }}>
+                        emissor{o.id}@badgeone.com.br
+                      </code>
+                      <button
+                        onClick={(e) => { e.preventDefault(); navigator.clipboard.writeText(`emissor${o.id}@badgeone.com.br`); }}
+                        title="Copiar login do emissor"
+                        style={{ background: "none", border: "none", cursor: "pointer", fontSize: 12, padding: "0 2px", opacity: 0.6 }}
+                      >
+                        📋
+                      </button>
+                    </div>
                   </div>
 
                   <div style={{ display: "grid", gap: 6, justifyItems: "end" }}>

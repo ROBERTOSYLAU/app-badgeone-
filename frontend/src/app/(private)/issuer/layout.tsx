@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { RequireAuth, useAuth } from "../../../lib/auth-context";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function IssuerLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RequireAuth>
+    <RequireAuth allowedRoles={["issuer", "admin"]}>
       <div
         style={{
           display: "grid",
@@ -16,14 +16,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           background: "var(--bg-soft, #F5F5F5)",
         }}
       >
-        <AdminSidebar />
+        <IssuerSidebar />
         <div>{children}</div>
       </div>
     </RequireAuth>
   );
 }
 
-function AdminSidebar() {
+function IssuerSidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -50,10 +50,11 @@ function AdminSidebar() {
   }
 
   const navItems = [
-    { href: "/admin", label: "Visão Geral", icon: "📊" },
-    { href: "/admin/organizations", label: "Organizações", icon: "🏢" },
-    { href: "/admin/lots", label: "Lotes", icon: "📦" },
-    { href: "/admin/audit", label: "Histórico", icon: "📋" },
+    { href: "/issuer", label: "Visão Geral", icon: "📊" },
+    { href: "/issuer/lots", label: "Meus Lotes", icon: "📦" },
+    { href: "/issuer/emit", label: "Emitir Badge", icon: "🎖️" },
+    { href: "/issuer/credentials", label: "Credenciais", icon: "📋" },
+    { href: "/issuer/perfil", label: "Meu Perfil", icon: "⚙️" },
   ];
 
   return (
@@ -61,7 +62,7 @@ function AdminSidebar() {
       style={{
         width: 180,
         minHeight: "100vh",
-        background: "var(--sidebar-bg, #3D1F6E)",
+        background: "var(--sidebar-bg, #1A3A5C)",
         borderRight: "1px solid rgba(255,255,255,0.08)",
         padding: "12px 10px",
         display: "flex",
@@ -73,7 +74,7 @@ function AdminSidebar() {
     >
       {/* Logo */}
       <Link
-        href="/admin"
+        href="/issuer"
         style={{
           display: "flex",
           alignItems: "center",
@@ -91,6 +92,19 @@ function AdminSidebar() {
         </span>
       </Link>
 
+      {/* Organização */}
+      <div
+        style={{
+          fontSize: 11,
+          color: "rgba(255,255,255,0.5)",
+          padding: "2px 10px 8px",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          marginBottom: 2,
+        }}
+      >
+        {user?.organization_name || "Organização"}
+      </div>
+
       {/* Nav items */}
       <nav style={{ display: "grid", gap: 3 }}>
         {navItems.map((item) => {
@@ -107,8 +121,8 @@ function AdminSidebar() {
                 borderRadius: 7,
                 textDecoration: "none",
                 color: active ? "#fff" : "rgba(255,255,255,0.68)",
-                background: active ? "rgba(181,212,0,0.18)" : "transparent",
-                border: `1px solid ${active ? "rgba(181,212,0,0.35)" : "transparent"}`,
+                background: active ? "rgba(0,180,216,0.18)" : "transparent",
+                border: `1px solid ${active ? "rgba(0,180,216,0.35)" : "transparent"}`,
                 fontWeight: active ? 600 : 400,
                 fontSize: 13,
               }}
@@ -142,7 +156,7 @@ function AdminSidebar() {
         <span style={{ fontSize: 11 }}>{dark ? "Claro" : "Escuro"}</span>
       </button>
 
-      {/* Sair — abaixo do dark mode */}
+      {/* Sair */}
       <button
         onClick={() => { logout(); router.push("/"); }}
         style={{
@@ -166,10 +180,10 @@ function AdminSidebar() {
       {/* User info no rodapé */}
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10 }}>
         <div style={{ color: "#fff", fontWeight: 600, fontSize: 12 }}>
-          {user?.name || "Admin"}
+          {user?.name || "Emissor"}
         </div>
         <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
-          {user?.organization_name || "Administrador"}
+          Emissor
         </div>
       </div>
     </aside>

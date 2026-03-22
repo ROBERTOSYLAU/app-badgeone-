@@ -203,6 +203,13 @@ def create_lot(
         if hasattr(lot, "end_date"):
             lot.end_date = end_dt
 
+        # Preservar título original imutável
+        original = (payload.title or "").strip() or None
+        if hasattr(lot, "original_title"):
+            lot.original_title = original
+        if hasattr(lot, "display_title"):
+            lot.display_title = None  # issuer define depois se quiser
+
         db.add(lot)
         db.flush()
 
@@ -255,7 +262,11 @@ def update_lot(
     before = f"title={lot.title}, total={lot.total_badges}, status={lot.status}"
 
     if payload.title is not None:
-        lot.title = (payload.title or "").strip() or None
+        new_title = (payload.title or "").strip() or None
+        lot.title = new_title
+        # Sincroniza original_title se ainda não foi definido
+        if hasattr(lot, "original_title") and not lot.original_title:
+            lot.original_title = new_title
 
     if payload.description is not None:
         lot.description = (payload.description or "").strip() or None
@@ -311,6 +322,8 @@ def update_lot(
         "end_date": _safe_dt(lot, "end_date"),
         "status": lot.status,
         "created_at": _safe_created_at(lot),
+        "original_title": getattr(lot, "original_title", None),
+        "display_title": getattr(lot, "display_title", None),
     }
 
 
@@ -413,6 +426,62 @@ def recover_lot(
     }
 
 
+class LotRenameRequest(BaseModel):
+    display_title: str
+
+
+@router.patch("/{lot_id}/rename")
+def rename_lot(
+    lot_id: int,
+    payload: LotRenameRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_issuer_or_admin),
+):
+    ensure_lot_columns(db)
+    lot = db.query(BadgeLot).filter(BadgeLot.id == lot_id).first()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lote não encontrado")
+    if user.role == "issuer" and lot.organization_id != user.organization_id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    new_name = (payload.display_title or "").strip()
+    if not new_name:
+        raise HTTPException(status_code=400, detail="Nome não pode ser vazio")
+    if hasattr(lot, "display_title"):
+        lot.display_title = new_name
+    log_action(db, "lot", lot.id, "rename", f"display_title={new_name} por user={user.id}")
+    db.commit()
+    db.refresh(lot)
+    return {"id": lot.id, "display_title": getattr(lot, "display_title", None), "original_title": getattr(lot, "original_title", None)}
+
+
+class LotStatusRequest(BaseModel):
+    status: str
+
+
+@router.patch("/{lot_id}/set-status")
+def set_lot_status(
+    lot_id: int,
+    payload: LotStatusRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_issuer_or_admin),
+):
+    ensure_lot_columns(db)
+    lot = db.query(BadgeLot).filter(BadgeLot.id == lot_id).first()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lote não encontrado")
+    if user.role == "issuer" and lot.organization_id != user.organization_id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    allowed = {"active", "paused", "revoked"} if user.role == "issuer" else {"active", "paused", "revoked", "finished", "trashed"}
+    if payload.status not in allowed:
+        raise HTTPException(status_code=400, detail=f"Status inválido para seu perfil")
+    before = lot.status
+    lot.status = payload.status
+    log_action(db, "lot", lot.id, "status_change", f"{before}->{lot.status} por user={user.id}")
+    db.commit()
+    db.refresh(lot)
+    return {"id": lot.id, "status": lot.status, "remaining": _remaining(lot)}
+
+
 @router.get("")
 def list_lots(
     db: Session = Depends(get_db),
@@ -446,6 +515,8 @@ def list_lots(
             "end_date": _safe_dt(x, "end_date"),
             "status": x.status,
             "created_at": _safe_created_at(x),
+            "original_title": getattr(x, "original_title", None),
+            "display_title": getattr(x, "display_title", None),
         }
         for x in data
     ]
