@@ -178,6 +178,8 @@ export default function OrganizationDetailsPage({
   const [issuerEmailDraft, setIssuerEmailDraft] = useState("");
   const [editingIssuerPassword, setEditingIssuerPassword] = useState(false);
   const [issuerPasswordDraft, setIssuerPasswordDraft] = useState("");
+  const [showIssuerLogin, setShowIssuerLogin] = useState(true);
+  const [showIssuerPassword, setShowIssuerPassword] = useState(false);
   const [tab, setTab] = useState<TabKey>("overview");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [noteTitle, setNoteTitle] = useState("");
@@ -1034,10 +1036,15 @@ export default function OrganizationDetailsPage({
                         </div>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--bg-soft)", borderRadius: 7, padding: "9px 12px", border: "1px solid var(--line)", minHeight: 38 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, background: "var(--bg-soft)", borderRadius: 7, padding: "9px 10px", border: "1px solid var(--line)", minHeight: 38 }}>
                         <code style={{ fontSize: 13, color: "var(--primary)", fontWeight: 700, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {issuerUser.email || "—"}
+                          {showIssuerLogin ? (issuerUser.email || "—") : "••••••••••••••••••"}
                         </code>
+                        <button onClick={() => setShowIssuerLogin((v) => !v)}
+                          title={showIssuerLogin ? "Ocultar login" : "Mostrar login"}
+                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, padding: "0 2px", flexShrink: 0, opacity: 0.6 }}>
+                          {showIssuerLogin ? "🙈" : "👁️"}
+                        </button>
                         <button onClick={() => copyToClipboard(issuerUser.email, "email")}
                           title="Copiar login"
                           style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: "0 2px", flexShrink: 0 }}>
@@ -1081,8 +1088,15 @@ export default function OrganizationDetailsPage({
                         </div>
                       </div>
                     ) : issuerUser.password_is_default !== false ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f0fdf4", borderRadius: 7, padding: "9px 12px", border: "1px solid #86efac", minHeight: 38 }}>
-                        <code style={{ fontSize: 14, color: "#16a34a", fontWeight: 700, flex: 1, letterSpacing: "1px" }}>Emissor123</code>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#f0fdf4", borderRadius: 7, padding: "9px 10px", border: "1px solid #86efac", minHeight: 38 }}>
+                        <code style={{ fontSize: 14, color: "#16a34a", fontWeight: 700, flex: 1, letterSpacing: showIssuerPassword ? "1px" : "3px" }}>
+                          {showIssuerPassword ? "Emissor123" : "••••••••••"}
+                        </code>
+                        <button onClick={() => setShowIssuerPassword((v) => !v)}
+                          title={showIssuerPassword ? "Ocultar senha" : "Mostrar senha"}
+                          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, padding: "0 2px", flexShrink: 0, opacity: 0.6 }}>
+                          {showIssuerPassword ? "🙈" : "👁️"}
+                        </button>
                         <button onClick={() => copyToClipboard("Emissor123", "senha")}
                           title="Copiar senha"
                           style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14, padding: "0 2px", flexShrink: 0 }}>
@@ -1090,7 +1104,7 @@ export default function OrganizationDetailsPage({
                         </button>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fef9ec", borderRadius: 7, padding: "9px 12px", border: "1px solid #fcd34d", minHeight: 38 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, background: "#fef9ec", borderRadius: 7, padding: "9px 10px", border: "1px solid #fcd34d", minHeight: 38 }}>
                         <span style={{ fontSize: 14, color: "#78350f", fontWeight: 700, flex: 1, letterSpacing: "3px" }}>••••••••</span>
                         <span style={{ fontSize: 10, color: "#92400e", fontWeight: 600, whiteSpace: "nowrap" }}>personalizada</span>
                       </div>
