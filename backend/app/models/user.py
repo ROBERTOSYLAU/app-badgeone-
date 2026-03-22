@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Boolean, Column, Integer, String, ForeignKey, DateTime
 from app.core.db import Base
 
 
@@ -14,3 +14,4 @@ class User(Base):
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
     password_reset_token = Column(String(64), nullable=True, index=True)
     password_reset_expires = Column(DateTime, nullable=True)
+    password_is_default = Column(Boolean, nullable=False, default=True, server_default="true")

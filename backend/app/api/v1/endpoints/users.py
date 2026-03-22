@@ -76,9 +76,34 @@ def list_users(
             "role": u.role,
             "status": u.status,
             "organization_id": u.organization_id,
+            "password_is_default": getattr(u, "password_is_default", True),
         }
         for u in users
     ]
+
+
+class UserEmailUpdate(BaseModel):
+    email: EmailStr
+
+
+@router.patch("/{user_id}")
+def update_user(user_id: int, payload: UserEmailUpdate, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Admin atualiza o e-mail do emissor vinculado à organização."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    if db.query(User).filter(User.email == payload.email, User.id != user_id).first():
+        raise HTTPException(status_code=409, detail="E-mail já está em uso")
+    user.email = payload.email
+    db.commit()
+    db.refresh(user)
+    return {
+        "id": user.id,
+        "email": user.email,
+        "role": user.role,
+        "status": user.status,
+        "password_is_default": getattr(user, "password_is_default", True),
+    }
 
 
 @router.post("/{user_id}/reset-password")
@@ -94,5 +119,7 @@ def admin_reset_user_password(
     user.password_hash = hash_password("Emissor123")
     user.password_reset_token = None
     user.password_reset_expires = None
+    if hasattr(user, "password_is_default"):
+        user.password_is_default = True
     db.commit()
     return {"ok": True, "message": "Senha redefinida para Emissor123"}

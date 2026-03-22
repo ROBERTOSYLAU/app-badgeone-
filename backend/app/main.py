@@ -49,6 +49,7 @@ def startup():
             conn.execute(text("ALTER TABLE credentials ADD COLUMN IF NOT EXISTS issued_by_user_id INTEGER"))
             conn.execute(text("ALTER TABLE credentials ADD COLUMN IF NOT EXISTS recipient_cpf VARCHAR(14)"))
             conn.execute(text("ALTER TABLE credentials ADD COLUMN IF NOT EXISTS rectification_note VARCHAR(500)"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_is_default BOOLEAN DEFAULT TRUE"))
             print("✅ Database migrations completed successfully")
     except Exception as e:
         print(f"⚠️ Migration warning (may already exist): {e}")

@@ -239,6 +239,8 @@ def update_me(payload: UpdateMeRequest, db: Session = Depends(get_db), current_u
         if len(payload.new_password) < 6:
             raise HTTPException(status_code=400, detail="Nova senha deve ter no mínimo 6 caracteres")
         current_user.password_hash = hash_password(payload.new_password)
+        if hasattr(current_user, "password_is_default"):
+            current_user.password_is_default = False
 
     db.commit()
     return {"ok": True, "email": current_user.email}

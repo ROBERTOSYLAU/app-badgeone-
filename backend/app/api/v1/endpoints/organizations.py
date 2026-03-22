@@ -160,6 +160,8 @@ def create_org(
                 status="active",
                 organization_id=org.id,
             )
+            if hasattr(issuer, "password_is_default"):
+                issuer.password_is_default = True
             db.add(issuer)
             db.commit()
 
@@ -433,3 +435,43 @@ def migrate_add_fields(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+
+
+@router.post("/{org_id}/ensure-issuer")
+def ensure_issuer(org_id: int, db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Cria o emissor padrão para a organização se ainda não existir."""
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organização não encontrada")
+
+    issuer_email = f"emissor{org_id}@badgeone.com.br"
+    existing = db.query(User).filter(User.organization_id == org_id, User.role == "issuer").first()
+
+    if existing:
+        return {
+            "created": False,
+            "id": existing.id,
+            "email": existing.email,
+            "password_is_default": getattr(existing, "password_is_default", True),
+        }
+
+    issuer = User(
+        email=issuer_email,
+        name=f"Emissor {org.name}",
+        password_hash=hash_password("Emissor123"),
+        role="issuer",
+        status="active",
+        organization_id=org_id,
+    )
+    if hasattr(issuer, "password_is_default"):
+        issuer.password_is_default = True
+    db.add(issuer)
+    db.commit()
+    db.refresh(issuer)
+
+    return {
+        "created": True,
+        "id": issuer.id,
+        "email": issuer.email,
+        "password_is_default": True,
+    }
