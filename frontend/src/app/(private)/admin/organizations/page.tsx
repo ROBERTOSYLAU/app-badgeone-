@@ -308,12 +308,13 @@ export default function AdminOrganizationsPage() {
 
     try {
       await apiDelete(`/api/v1/organizations/${id}?force=true`);
+      setOrgs((prev) => prev.filter((o) => o.id !== id));
       setMessage("Organização excluída permanentemente.");
-      await loadOrgs();
     } catch (e) {
       const msg =
         e instanceof Error ? e.message : "Erro ao remover organização permanentemente.";
       setMessage(msg);
+      await loadOrgs();
     }
   }
 
@@ -593,7 +594,7 @@ export default function AdminOrganizationsPage() {
                   marginBottom: 0,
                   background: "rgba(255,255,255,0.02)",
                   border: "1px solid rgba(255,255,255,0.08)",
-                  padding: "12px 14px",
+                  padding: "10px 12px",
                 }}
               >
                 <div
@@ -611,13 +612,13 @@ export default function AdminOrganizationsPage() {
                       textDecoration: "none",
                       color: "#fff",
                       display: "grid",
-                      gap: 4,
+                      gap: 3,
                     }}
                   >
-                    <div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.2 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3 }}>
                       {o.name}
                     </div>
-                    <div className="muted">ID {o.id}</div>
+                    <div className="muted" style={{ fontSize: 12 }}>ID {o.id}</div>
                   </Link>
 
                   <div style={{ display: "grid", gap: 4 }}>

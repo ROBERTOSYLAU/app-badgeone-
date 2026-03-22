@@ -12,6 +12,7 @@ from app.core.db import get_db
 from app.models.organization import Organization
 from app.models.lot import BadgeLot
 from app.models.credential import Credential
+from app.models.organization_note import OrganizationNote
 
 router = APIRouter()
 
@@ -284,6 +285,9 @@ def delete_org(
             {"org_id": org_id},
         )
 
+        db.query(OrganizationNote).filter(OrganizationNote.organization_id == org_id).delete(
+            synchronize_session=False
+        )
         db.query(Credential).filter(Credential.organization_id == org_id).delete(
             synchronize_session=False
         )
