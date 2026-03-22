@@ -209,7 +209,7 @@ export default function AdminOrganizationsPage() {
   const { user, isLoading } = useAuth();
 
   const [orgs, setOrgs] = useState<Org[]>([]);
-  const [status, setStatus] = useState("active");
+  const [status, setStatus] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -390,8 +390,8 @@ export default function AdminOrganizationsPage() {
   const filtered = useMemo(() => {
     let base: Org[];
     if (status === "all") {
-      // "Todas" = active + inactive/paused (sem lixeira)
-      base = orgs.filter((o) => o.status !== "trashed");
+      // "Todas" = todas incluindo lixeira
+      base = orgs;
     } else if (status === "inactive") {
       base = orgs.filter((o) => o.status === "inactive" || o.status === "paused");
     } else {

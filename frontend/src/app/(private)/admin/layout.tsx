@@ -120,27 +120,7 @@ function AdminSidebar() {
         })}
       </nav>
 
-      {/* Sair — logo abaixo dos itens de nav */}
-      <button
-        onClick={() => { logout(); router.push("/"); }}
-        style={{
-          width: "100%",
-          background: "rgba(255,255,255,0.07)",
-          border: "1px solid rgba(255,255,255,0.12)",
-          color: "rgba(255,255,255,0.75)",
-          borderRadius: 7,
-          padding: "7px 10px",
-          fontSize: 12,
-          cursor: "pointer",
-          fontWeight: 500,
-          textAlign: "left",
-          marginTop: 2,
-        }}
-      >
-        Sair
-      </button>
-
-      {/* Dark mode toggle — logo abaixo do Sair */}
+      {/* Dark mode — logo abaixo dos itens de nav */}
       <button
         onClick={toggleDark}
         title={dark ? "Modo claro" : "Modo escuro"}
@@ -155,6 +135,7 @@ function AdminSidebar() {
           alignItems: "center",
           gap: 5,
           width: "100%",
+          marginTop: 2,
         }}
       >
         <span style={{ fontSize: 14 }}>{dark ? "☀️" : "🌙"}</span>
@@ -164,14 +145,32 @@ function AdminSidebar() {
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* User info at very bottom */}
-      <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10 }}>
-        <div style={{ color: "#fff", fontWeight: 600, fontSize: 12 }}>
-          {user?.name || "Admin"}
+      {/* User info + Sair no rodapé */}
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10, display: "grid", gap: 8 }}>
+        <div>
+          <div style={{ color: "#fff", fontWeight: 600, fontSize: 12 }}>
+            {user?.name || "Admin"}
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
+            {user?.organization_name || "Administrador"}
+          </div>
         </div>
-        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
-          {user?.organization_name || "Administrador"}
-        </div>
+        <button
+          onClick={() => { logout(); router.push("/"); }}
+          style={{
+            width: "100%",
+            background: "rgba(255,255,255,0.07)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            color: "rgba(255,255,255,0.75)",
+            borderRadius: 7,
+            padding: "7px 10px",
+            fontSize: 12,
+            cursor: "pointer",
+            fontWeight: 500,
+          }}
+        >
+          Sair
+        </button>
       </div>
     </aside>
   );
