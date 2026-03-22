@@ -21,12 +21,12 @@ function AdminSidebar() {
       style={{
         width: 180,
         minHeight: "100vh",
-        background: "#081748",
+        background: "#3D1F6E",
         borderRight: "1px solid rgba(255,255,255,0.08)",
-        padding: 10,
+        padding: "12px 10px",
         display: "flex",
         flexDirection: "column",
-        gap: 10,
+        gap: 8,
         position: "sticky",
         top: 0,
       }}
@@ -36,20 +36,19 @@ function AdminSidebar() {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 12,
-          padding: "7px 10px",
-          borderRadius: 8,
+          gap: 8,
+          padding: "6px 8px 14px",
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+          marginBottom: 6,
           textDecoration: "none",
           color: "#fff",
-          fontWeight: 700,
-          fontSize: 20,
         }}
       >
-        <span style={{ fontSize: 22 }}>🏅</span>
-        <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: "nowrap" }}>Badge One</span>
+        <span style={{ fontSize: 20 }}>🏅</span>
+        <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: "nowrap" }}>Badge One</span>
       </Link>
 
-      <nav style={{ display: "grid", gap: 8 }}>
+      <nav style={{ display: "grid", gap: 3 }}>
         {navItems.map((item) => {
           const active = pathname === item.href;
           return (
@@ -59,17 +58,18 @@ function AdminSidebar() {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                padding: "12px 14px",
-                borderRadius: 8,
+                gap: 8,
+                padding: "9px 10px",
+                borderRadius: 7,
                 textDecoration: "none",
-                color: "#fff",
-                background: active ? "rgba(37, 99, 235, 0.35)" : "transparent",
-                border: `1px solid ${active ? "rgba(96,165,250,0.45)" : "rgba(255,255,255,0.08)"}`,
-                fontWeight: active ? 700 : 500,
+                color: active ? "#fff" : "rgba(255,255,255,0.68)",
+                background: active ? "rgba(181,212,0,0.18)" : "transparent",
+                border: `1px solid ${active ? "rgba(181,212,0,0.35)" : "transparent"}`,
+                fontWeight: active ? 600 : 400,
+                fontSize: 13,
               }}
             >
-              <span>{item.icon}</span>
+              <span style={{ fontSize: 15 }}>{item.icon}</span>
               <span>{item.label}</span>
             </Link>
           );
@@ -80,27 +80,36 @@ function AdminSidebar() {
         style={{
           marginTop: "auto",
           borderTop: "1px solid rgba(255,255,255,0.08)",
-          paddingTop: 14,
+          paddingTop: 12,
           display: "grid",
-          gap: 10,
+          gap: 8,
         }}
       >
         <div>
-          <div style={{ color: "#fff", fontWeight: 700 }}>
+          <div style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>
             {user?.name || "Badge One Admin"}
           </div>
-          <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>
+          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>
             {user?.organization_name || "Administrador"}
           </div>
         </div>
 
         <button
-          className="btn-ghost"
           onClick={() => {
             logout();
             router.push("/");
           }}
-          style={{ width: "100%" }}
+          style={{
+            width: "100%",
+            background: "rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.15)",
+            color: "rgba(255,255,255,0.8)",
+            borderRadius: 7,
+            padding: "7px 10px",
+            fontSize: 12,
+            cursor: "pointer",
+            fontWeight: 500,
+          }}
         >
           Sair
         </button>
@@ -121,7 +130,7 @@ export default function AdminLayout({
           display: "grid",
           gridTemplateColumns: "180px 1fr",
           minHeight: "100vh",
-          background: "#03113b",
+          background: "#F5F5F5",
         }}
       >
         <AdminSidebar />

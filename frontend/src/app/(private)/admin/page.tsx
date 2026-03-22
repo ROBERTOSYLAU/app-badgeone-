@@ -141,7 +141,7 @@ export default function AdminDashboard() {
           label="Organizações"
           value={kpiOrganizations}
           icon={<OrgIcon />}
-          color="#3B82F6"
+          color="#5B2D8E"
           onClick={() => router.push("/admin/organizations")}
           hint="Ver todas"
         />
@@ -149,7 +149,7 @@ export default function AdminDashboard() {
           label="Lotes"
           value={kpiLots}
           icon={<LotIcon />}
-          color="#8B5CF6"
+          color="#7C3ACD"
           onClick={() => router.push("/admin/lots")}
           hint="Ver todos"
         />
@@ -157,7 +157,7 @@ export default function AdminDashboard() {
           label="Emissões"
           value={kpiEmissions}
           icon={<BadgeIcon />}
-          color="#10B981"
+          color="#B5D400"
           onClick={() => router.push("/admin/emissions")}
           hint="Ver todas"
         />
@@ -165,7 +165,7 @@ export default function AdminDashboard() {
           label="Setup concluído"
           value={`${completionRate}%`}
           icon={<CheckIcon />}
-          color={completionRate === 100 ? "#10B981" : "#F59E0B"}
+          color={completionRate === 100 ? "#16A34A" : "#F59E0B"}
           hint={completionRate === 100 ? "Tudo pronto!" : "Em andamento"}
         />
       </section>
@@ -213,7 +213,7 @@ export default function AdminDashboard() {
               <span style={styles.progressValue}>{completionRate}%</span>
             </div>
             <div style={styles.progressBar}>
-              <div style={{ ...styles.progressFill, width: `${completionRate}%`, backgroundColor: completionRate === 100 ? "#10B981" : "#F59E0B" }} />
+              <div style={{ ...styles.progressFill, width: `${completionRate}%`, backgroundColor: completionRate === 100 ? "#16A34A" : "#5B2D8E" }} />
             </div>
           </div>
 
@@ -272,16 +272,16 @@ function KpiCard({ label, value, icon, color, onClick, hint }: {
     <button
       type="button"
       onClick={onClick}
-      style={{ ...styles.kpiCard, cursor: onClick ? "pointer" : "default", "--accent": color } as React.CSSProperties}
+      style={{ ...styles.kpiCard, cursor: onClick ? "pointer" : "default" }}
       className="kpi-card"
     >
-      <div style={{ ...styles.kpiIcon, backgroundColor: `${color}18`, color }}>
+      <div style={{ ...styles.kpiIcon, backgroundColor: `${color}14`, color }}>
         {icon}
       </div>
       <div style={styles.kpiValue}>{value}</div>
       <div style={styles.kpiLabel}>{label}</div>
       {hint && <div style={styles.kpiHint}>{hint} →</div>}
-      <style>{`.kpi-card:hover { border-color: ${color}60 !important; transform: translateY(-2px); box-shadow: 0 8px 24px ${color}18; }`}</style>
+      <style>{`.kpi-card:hover { border-color: ${color}50 !important; transform: translateY(-1px); box-shadow: 0 4px 14px ${color}14; }`}</style>
     </button>
   );
 }
@@ -296,7 +296,7 @@ function ActionBtn({ label, description, icon, onClick }: {
         <div style={styles.actionLabel}>{label}</div>
         <div style={styles.actionDesc}>{description}</div>
       </div>
-      <style>{`.action-btn:hover { background: rgba(59,130,246,0.06) !important; border-color: rgba(59,130,246,0.3) !important; }`}</style>
+      <style>{`.action-btn:hover { background: rgba(91,45,142,0.04) !important; border-color: rgba(91,45,142,0.25) !important; }`}</style>
     </button>
   );
 }
@@ -304,9 +304,9 @@ function ActionBtn({ label, description, icon, onClick }: {
 function StatusRow({ label, done }: { label: string; done: boolean }) {
   return (
     <div style={styles.statusRow}>
-      <span style={{ ...styles.statusDot, backgroundColor: done ? "#10B981" : "#374151" }} />
-      <span style={{ ...styles.statusText, color: done ? "#E5E7EB" : "#6B7280" }}>{label}</span>
-      <span style={{ ...styles.statusBadge, backgroundColor: done ? "#10B98120" : "#37415120", color: done ? "#10B981" : "#6B7280" }}>
+      <span style={{ ...styles.statusDot, backgroundColor: done ? "#16A34A" : "#D1D5DB" }} />
+      <span style={{ ...styles.statusText, color: done ? "#1A1A1A" : "#9CA3AF" }}>{label}</span>
+      <span style={{ ...styles.statusBadge, backgroundColor: done ? "#16A34A14" : "#F0F0F0", color: done ? "#16A34A" : "#9CA3AF" }}>
         {done ? "Concluído" : "Pendente"}
       </span>
     </div>
@@ -317,9 +317,9 @@ function SummaryRow({ label, value, active }: { label: string; value: number; ac
   return (
     <tr>
       <td style={styles.td}>{label}</td>
-      <td style={{ ...styles.td, fontWeight: 600, color: "#F9FAFB" }}>{value}</td>
+      <td style={{ ...styles.td, fontWeight: 600, color: "#1A1A1A" }}>{value}</td>
       <td style={styles.td}>
-        <span style={{ ...styles.pill, backgroundColor: active ? "#10B98118" : "#37415120", color: active ? "#10B981" : "#6B7280" }}>
+        <span style={{ ...styles.pill, backgroundColor: active ? "#16A34A14" : "#F0F0F0", color: active ? "#16A34A" : "#9CA3AF" }}>
           {active ? "Ativo" : "Vazio"}
         </span>
       </td>
@@ -348,10 +348,10 @@ function CheckIcon({ size = 18, color = "currentColor" }: { size?: number; color
 const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: "100vh",
-    backgroundColor: "#0F172A",
+    backgroundColor: "#F5F5F5",
     padding: "16px 20px",
     fontFamily: "'Inter', system-ui, sans-serif",
-    color: "#E5E7EB",
+    color: "#1A1A1A",
   },
   loadingWrap: {
     display: "flex",
@@ -362,10 +362,10 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 10,
   },
   loadingSpinner: {
-    width: 36,
-    height: 36,
-    border: "3px solid #1E293B",
-    borderTop: "3px solid #3B82F6",
+    width: 32,
+    height: 32,
+    border: "3px solid #E8E8E8",
+    borderTop: "3px solid #5B2D8E",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
   },
@@ -374,118 +374,120 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: 14,
     flexWrap: "wrap",
     gap: 10,
   },
   pageTitle: {
     fontSize: 20,
     fontWeight: 700,
-    color: "#F9FAFB",
+    color: "#5B2D8E",
     margin: 0,
     letterSpacing: "-0.5px",
   },
   pageSubtitle: {
     fontSize: 13,
     color: "#6B7280",
-    margin: "6px 0 0",
+    margin: "4px 0 0",
     textTransform: "capitalize",
   },
   btnOutline: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
-    padding: "9px 18px",
-    fontSize: 13,
+    gap: 7,
+    padding: "7px 14px",
+    fontSize: 12,
     fontWeight: 500,
-    color: "#9CA3AF",
-    backgroundColor: "transparent",
-    border: "1px solid #1E293B",
-    borderRadius: 8,
+    color: "#6B7280",
+    backgroundColor: "#fff",
+    border: "1px solid #E8E8E8",
+    borderRadius: 7,
     cursor: "pointer",
     transition: "all 0.15s",
   },
   btnDisabled: { opacity: 0.5, cursor: "not-allowed" },
   spinnerSmall: {
     display: "inline-block",
-    width: 12,
-    height: 12,
-    border: "2px solid #374151",
-    borderTop: "2px solid #6B7280",
+    width: 11,
+    height: 11,
+    border: "2px solid #E8E8E8",
+    borderTop: "2px solid #5B2D8E",
     borderRadius: "50%",
     animation: "spin 0.8s linear infinite",
   },
   errorBanner: {
-    backgroundColor: "#7F1D1D20",
-    border: "1px solid #7F1D1D40",
-    color: "#FCA5A5",
-    borderRadius: 8,
-    padding: "12px 16px",
+    backgroundColor: "#DC262610",
+    border: "1px solid #DC262630",
+    color: "#DC2626",
+    borderRadius: 7,
+    padding: "10px 14px",
     fontSize: 13,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   kpiGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
     gap: 10,
     marginBottom: 12,
   },
   kpiCard: {
-    backgroundColor: "#1E293B",
-    border: "1px solid #334155",
+    backgroundColor: "#FFFFFF",
+    border: "1px solid #E8E8E8",
     borderRadius: 8,
     padding: "12px 14px",
     textAlign: "left",
-    transition: "all 0.2s ease",
+    transition: "all 0.18s ease",
     display: "flex",
     flexDirection: "column",
-    gap: 8,
+    gap: 6,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
   },
   kpiIcon: {
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: 6,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  kpiValue: { fontSize: 22, fontWeight: 700, color: "#F9FAFB", lineHeight: 1 },
-  kpiLabel: { fontSize: 13, color: "#6B7280", fontWeight: 500 },
-  kpiHint: { fontSize: 12, color: "#3B82F6", marginTop: 4 },
+  kpiValue: { fontSize: 22, fontWeight: 700, color: "#1A1A1A", lineHeight: 1 },
+  kpiLabel: { fontSize: 12, color: "#6B7280", fontWeight: 500 },
+  kpiHint: { fontSize: 11, color: "#5B2D8E", marginTop: 2 },
   twoCol: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: 20,
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: 12,
     marginBottom: 12,
   },
   card: {
-    backgroundColor: "#1E293B",
-    border: "1px solid #334155",
+    backgroundColor: "#FFFFFF",
+    border: "1px solid #E8E8E8",
     borderRadius: 8,
-    padding: "14px 16px",
+    padding: "12px 14px",
     marginBottom: 0,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
   },
   cardTitle: {
     fontSize: 13,
     fontWeight: 600,
-    color: "#F9FAFB",
-    margin: "0 0 16px",
-    paddingBottom: 12,
-    borderBottom: "1px solid #334155",
+    color: "#1A1A1A",
+    margin: "0 0 12px",
+    paddingBottom: 10,
+    borderBottom: "1px solid #E8E8E8",
   },
   actionGrid: {
     display: "flex",
     flexDirection: "column",
-    gap: 8,
+    gap: 6,
   },
   actionBtn: {
     display: "flex",
     alignItems: "center",
     gap: 8,
-    padding: "12px 14px",
+    padding: "10px 12px",
     backgroundColor: "transparent",
-    border: "1px solid #334155",
+    border: "1px solid #E8E8E8",
     borderRadius: 6,
     cursor: "pointer",
     transition: "all 0.15s",
@@ -494,75 +496,75 @@ const styles: Record<string, React.CSSProperties> = {
     width: "100%",
   },
   actionIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 8,
-    backgroundColor: "#0F172A",
+    width: 34,
+    height: 34,
+    borderRadius: 7,
+    backgroundColor: "rgba(91,45,142,0.08)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#9CA3AF",
+    color: "#5B2D8E",
     flexShrink: 0,
   },
-  actionLabel: { fontSize: 13, fontWeight: 500, color: "#E5E7EB" },
-  actionDesc: { fontSize: 12, color: "#6B7280", marginTop: 2 },
-  progressWrap: { marginBottom: 20 },
-  progressHeader: { display: "flex", justifyContent: "space-between", marginBottom: 8 },
-  progressLabel: { fontSize: 13, color: "#9CA3AF" },
-  progressValue: { fontSize: 13, fontWeight: 600, color: "#F9FAFB" },
-  progressBar: { height: 6, backgroundColor: "#0F172A", borderRadius: 99, overflow: "hidden" },
+  actionLabel: { fontSize: 13, fontWeight: 500, color: "#1A1A1A" },
+  actionDesc: { fontSize: 11, color: "#6B7280", marginTop: 1 },
+  progressWrap: { marginBottom: 16 },
+  progressHeader: { display: "flex", justifyContent: "space-between", marginBottom: 6 },
+  progressLabel: { fontSize: 12, color: "#6B7280" },
+  progressValue: { fontSize: 12, fontWeight: 600, color: "#1A1A1A" },
+  progressBar: { height: 5, backgroundColor: "#F0F0F0", borderRadius: 99, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 99, transition: "width 0.4s ease" },
-  statusList: { display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 },
-  statusRow: { display: "flex", alignItems: "center", gap: 10 },
-  statusDot: { width: 8, height: 8, borderRadius: "50%", flexShrink: 0 },
+  statusList: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 },
+  statusRow: { display: "flex", alignItems: "center", gap: 8 },
+  statusDot: { width: 7, height: 7, borderRadius: "50%", flexShrink: 0 },
   statusText: { fontSize: 13, flex: 1 },
-  statusBadge: { fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 99 },
+  statusBadge: { fontSize: 10, fontWeight: 500, padding: "2px 7px", borderRadius: 99 },
   nextStepBox: {
     display: "flex",
     flexDirection: "column",
-    gap: 4,
-    padding: "12px 14px",
-    backgroundColor: "#0F172A",
-    border: "1px solid #1E40AF30",
-    borderLeft: "3px solid #3B82F6",
-    borderRadius: 8,
+    gap: 3,
+    padding: "10px 12px",
+    backgroundColor: "#F9F9F9",
+    border: "1px solid #E8E8E8",
+    borderLeft: "3px solid #5B2D8E",
+    borderRadius: 7,
   },
-  nextStepLabel: { fontSize: 11, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" },
-  nextStepValue: { fontSize: 13, fontWeight: 500, color: "#93C5FD" },
+  nextStepLabel: { fontSize: 10, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" },
+  nextStepValue: { fontSize: 13, fontWeight: 500, color: "#5B2D8E" },
   completedBadge: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
-    padding: "10px 14px",
-    backgroundColor: "#10B98110",
-    border: "1px solid #10B98130",
-    borderRadius: 8,
+    gap: 7,
+    padding: "9px 12px",
+    backgroundColor: "#16A34A10",
+    border: "1px solid #16A34A30",
+    borderRadius: 7,
     fontSize: 13,
-    color: "#10B981",
+    color: "#16A34A",
     fontWeight: 500,
   },
   table: { width: "100%", borderCollapse: "collapse" },
   th: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 600,
     color: "#6B7280",
     textTransform: "uppercase",
     letterSpacing: "0.06em",
-    padding: "0 0 12px",
+    padding: "0 0 10px",
     textAlign: "left",
-    borderBottom: "1px solid #334155",
+    borderBottom: "1px solid #E8E8E8",
   },
   td: {
     fontSize: 13,
-    color: "#9CA3AF",
-    padding: "12px 0",
-    borderBottom: "1px solid #1E293B",
+    color: "#6B7280",
+    padding: "10px 0",
+    borderBottom: "1px solid #F0F0F0",
   },
   pill: {
     display: "inline-block",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 500,
-    padding: "3px 10px",
+    padding: "2px 8px",
     borderRadius: 99,
   },
 };
