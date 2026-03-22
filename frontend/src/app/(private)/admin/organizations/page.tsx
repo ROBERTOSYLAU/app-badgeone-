@@ -209,7 +209,7 @@ export default function AdminOrganizationsPage() {
   const { user, isLoading } = useAuth();
 
   const [orgs, setOrgs] = useState<Org[]>([]);
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState("active");
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -388,7 +388,15 @@ export default function AdminOrganizationsPage() {
   }
 
   const filtered = useMemo(() => {
-    const base = status === "all" ? orgs : orgs.filter((o) => o.status === status);
+    let base: Org[];
+    if (status === "all") {
+      // "Todas" = active + inactive/paused (sem lixeira)
+      base = orgs.filter((o) => o.status !== "trashed");
+    } else if (status === "inactive") {
+      base = orgs.filter((o) => o.status === "inactive" || o.status === "paused");
+    } else {
+      base = orgs.filter((o) => o.status === status);
+    }
     const q = search.trim().toLowerCase();
 
     if (!q) return base;
@@ -547,12 +555,6 @@ export default function AdminOrganizationsPage() {
         >
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
-              className={status === "all" ? "btn-active" : "btn-ghost"}
-              onClick={() => setStatus("all")}
-            >
-              Todas
-            </button>
-            <button
               className={status === "active" ? "btn-active" : "btn-ghost"}
               onClick={() => setStatus("active")}
             >
@@ -569,6 +571,12 @@ export default function AdminOrganizationsPage() {
               onClick={() => setStatus("trashed")}
             >
               Lixeira
+            </button>
+            <button
+              className={status === "all" ? "btn-active" : "btn-ghost"}
+              onClick={() => setStatus("all")}
+            >
+              Todas
             </button>
           </div>
 

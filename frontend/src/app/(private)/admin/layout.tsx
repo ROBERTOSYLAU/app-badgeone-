@@ -5,7 +5,28 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { RequireAuth, useAuth } from "../../../lib/auth-context";
 
-function DarkModeToggle() {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <RequireAuth>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "180px 1fr",
+          minHeight: "100vh",
+          background: "var(--bg-soft, #F5F5F5)",
+        }}
+      >
+        <AdminSidebar />
+        <div>{children}</div>
+      </div>
+    </RequireAuth>
+  );
+}
+
+function AdminSidebar() {
+  const { user, logout } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
@@ -16,7 +37,7 @@ function DarkModeToggle() {
     }
   }, []);
 
-  function toggle() {
+  function toggleDark() {
     const next = !dark;
     setDark(next);
     if (next) {
@@ -27,43 +48,6 @@ function DarkModeToggle() {
       localStorage.setItem("theme", "light");
     }
   }
-
-  return (
-    <button
-      onClick={toggle}
-      title={dark ? "Modo claro" : "Modo escuro"}
-      style={{
-        position: "fixed",
-        top: 14,
-        right: 16,
-        zIndex: 1000,
-        background: "rgba(255,255,255,0.12)",
-        border: "1px solid rgba(255,255,255,0.2)",
-        backdropFilter: "blur(8px)",
-        color: "#fff",
-        borderRadius: 8,
-        padding: "6px 12px",
-        fontSize: 12,
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        fontWeight: 500,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-      }}
-    >
-      <span>{dark ? "☀️" : "🌙"}</span>
-      <span style={{ color: "rgba(255,255,255,0.9)" }}>
-        {dark ? "Claro" : "Escuro"}
-      </span>
-    </button>
-  );
-}
-
-function AdminSidebar() {
-  const { user, logout } = useAuth();
-  const pathname = usePathname();
-  const router = useRouter();
 
   const navItems = [
     { href: "/admin", label: "Visão Geral", icon: "📊" },
@@ -82,20 +66,21 @@ function AdminSidebar() {
         padding: "12px 10px",
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        gap: 6,
         position: "sticky",
         top: 0,
       }}
     >
+      {/* Logo */}
       <Link
         href="/admin"
         style={{
           display: "flex",
           alignItems: "center",
           gap: 8,
-          padding: "6px 8px 14px",
+          padding: "6px 8px 12px",
           borderBottom: "1px solid rgba(255,255,255,0.1)",
-          marginBottom: 6,
+          marginBottom: 4,
           textDecoration: "none",
           color: "#fff",
         }}
@@ -106,6 +91,7 @@ function AdminSidebar() {
         </span>
       </Link>
 
+      {/* Nav items */}
       <nav style={{ display: "grid", gap: 3 }}>
         {navItems.map((item) => {
           const active = pathname === item.href;
@@ -134,63 +120,69 @@ function AdminSidebar() {
         })}
       </nav>
 
+      {/* Sair — logo abaixo dos itens de nav */}
+      <button
+        onClick={() => { logout(); router.push("/"); }}
+        style={{
+          width: "100%",
+          background: "rgba(255,255,255,0.07)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          color: "rgba(255,255,255,0.75)",
+          borderRadius: 7,
+          padding: "7px 10px",
+          fontSize: 12,
+          cursor: "pointer",
+          fontWeight: 500,
+          textAlign: "left",
+          marginTop: 2,
+        }}
+      >
+        Sair
+      </button>
+
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
+
+      {/* User info + dark toggle at bottom */}
       <div
         style={{
-          marginTop: "auto",
           borderTop: "1px solid rgba(255,255,255,0.08)",
-          paddingTop: 12,
+          paddingTop: 10,
           display: "grid",
           gap: 8,
         }}
       >
         <div>
-          <div style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>
-            {user?.name || "Badge One Admin"}
+          <div style={{ color: "#fff", fontWeight: 600, fontSize: 12 }}>
+            {user?.name || "Admin"}
           </div>
-          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>
+          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
             {user?.organization_name || "Administrador"}
           </div>
         </div>
 
+        {/* Dark mode toggle — small, discrete */}
         <button
-          onClick={() => {
-            logout();
-            router.push("/");
-          }}
+          onClick={toggleDark}
+          title={dark ? "Modo claro" : "Modo escuro"}
           style={{
-            width: "100%",
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.15)",
-            color: "rgba(255,255,255,0.8)",
-            borderRadius: 7,
-            padding: "7px 10px",
-            fontSize: 12,
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 6,
+            padding: "5px 8px",
             cursor: "pointer",
-            fontWeight: 500,
+            fontSize: 12,
+            color: "rgba(255,255,255,0.6)",
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+            width: "100%",
           }}
         >
-          Sair
+          <span style={{ fontSize: 14 }}>{dark ? "☀️" : "🌙"}</span>
+          <span style={{ fontSize: 11 }}>{dark ? "Claro" : "Escuro"}</span>
         </button>
       </div>
     </aside>
-  );
-}
-
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <RequireAuth>
-      <DarkModeToggle />
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "180px 1fr",
-          minHeight: "100vh",
-          background: "var(--bg-soft, #F5F5F5)",
-        }}
-      >
-        <AdminSidebar />
-        <div>{children}</div>
-      </div>
-    </RequireAuth>
   );
 }

@@ -180,7 +180,23 @@ export default function OrganizationDetailsPage({
   const [lotTitle, setLotTitle] = useState("");
   const [lotDescription, setLotDescription] = useState("");
   const [lotQuantity, setLotQuantity] = useState("");
-  const [lotIssueWindowDays, setLotIssueWindowDays] = useState("365");
+  const [lotValidityMode, setLotValidityMode] = useState<"days" | "months" | "range">("days");
+  const [lotDays, setLotDays] = useState("365");
+  const [lotMonths, setLotMonths] = useState("");
+  const [lotRangeStart, setLotRangeStart] = useState("");
+  const [lotRangeEnd, setLotRangeEnd] = useState("");
+
+  function computeLotDays(): number {
+    if (lotValidityMode === "days") return parseInt(lotDays) || 0;
+    if (lotValidityMode === "months") return (parseInt(lotMonths) || 0) * 30;
+    if (lotValidityMode === "range" && lotRangeStart && lotRangeEnd) {
+      const diff = Math.ceil(
+        (new Date(lotRangeEnd).getTime() - new Date(lotRangeStart).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      return Math.max(0, diff);
+    }
+    return 0;
+  }
 
   const orgId = Number(params.id);
 
@@ -558,7 +574,7 @@ export default function OrganizationDetailsPage({
     }
 
     const qty = Number(lotQuantity);
-    const issueWindow = Number(lotIssueWindowDays);
+    const issueWindow = computeLotDays();
 
     if (!qty || qty <= 0) {
       setMessage("Quantidade deve ser maior que 0.");
@@ -566,7 +582,7 @@ export default function OrganizationDetailsPage({
     }
 
     if (!issueWindow || issueWindow <= 0) {
-      setMessage("Janela de emissão deve ser maior que 0.");
+      setMessage("Informe uma validade maior que zero.");
       return;
     }
 
@@ -584,7 +600,10 @@ export default function OrganizationDetailsPage({
       setLotTitle("");
       setLotDescription("");
       setLotQuantity("");
-      setLotIssueWindowDays("365");
+      setLotDays("365");
+      setLotMonths("");
+      setLotRangeStart("");
+      setLotRangeEnd("");
       await loadAll();
       setTab("overview");
     } catch (e) {
@@ -747,25 +766,88 @@ export default function OrganizationDetailsPage({
         <section className="card" style={{ marginBottom: 10 }} ref={lotFormRef}>
           <h2 style={{ fontSize: 13, marginBottom: 10, color: "var(--text)" }}>Novo Lote — {org.name}</h2>
           <form onSubmit={createLot}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <div>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Título</label>
-                <input value={lotTitle} onChange={(e) => setLotTitle(e.target.value)} placeholder="Ex: Lote Março 2026" />
+            <div style={{ display: "grid", gap: 10 }}>
+              {/* Title + Description */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div>
+                  <label style={lbl}>Título</label>
+                  <input value={lotTitle} onChange={(e) => setLotTitle(e.target.value)} placeholder="Ex: Lote Março 2026" />
+                </div>
+                <div>
+                  <label style={lbl}>Descrição (opcional)</label>
+                  <input value={lotDescription} onChange={(e) => setLotDescription(e.target.value)} placeholder="Opcional" />
+                </div>
               </div>
-              <div>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Descrição</label>
-                <input value={lotDescription} onChange={(e) => setLotDescription(e.target.value)} placeholder="Opcional" />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Qtd. Badges *</label>
+
+              {/* Quantity */}
+              <div style={{ maxWidth: 200 }}>
+                <label style={lbl}>Qtd. Badges *</label>
                 <input type="number" value={lotQuantity} onChange={(e) => setLotQuantity(e.target.value)} placeholder="100" required min="1" />
               </div>
+
+              {/* Validity mode */}
               <div>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 3 }}>Janela de emissão (dias) *</label>
-                <input type="number" value={lotIssueWindowDays} onChange={(e) => setLotIssueWindowDays(e.target.value)} placeholder="365" required min="1" />
+                <label style={lbl}>Validade *</label>
+                <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                  {(["days", "months", "range"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setLotValidityMode(m)}
+                      style={{
+                        padding: "4px 11px",
+                        fontSize: 11,
+                        borderRadius: 6,
+                        border: "1px solid",
+                        cursor: "pointer",
+                        fontWeight: lotValidityMode === m ? 600 : 400,
+                        background: lotValidityMode === m ? "rgba(181,212,0,0.15)" : "transparent",
+                        color: lotValidityMode === m ? "var(--primary)" : "var(--muted)",
+                        borderColor: lotValidityMode === m ? "rgba(181,212,0,0.4)" : "var(--line)",
+                      }}
+                    >
+                      {m === "days" ? "Dias" : m === "months" ? "Meses" : "Período"}
+                    </button>
+                  ))}
+                </div>
+
+                {lotValidityMode === "days" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input type="number" min={1} value={lotDays} onChange={(e) => setLotDays(e.target.value)} style={{ maxWidth: 100 }} />
+                    <span style={{ fontSize: 12, color: "var(--muted)" }}>dias</span>
+                  </div>
+                )}
+
+                {lotValidityMode === "months" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input type="number" min={1} value={lotMonths} onChange={(e) => setLotMonths(e.target.value)} placeholder="0" style={{ maxWidth: 100 }} />
+                    <span style={{ fontSize: 12, color: "var(--muted)" }}>
+                      meses{lotMonths ? ` (≈ ${parseInt(lotMonths) * 30} dias)` : ""}
+                    </span>
+                  </div>
+                )}
+
+                {lotValidityMode === "range" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <div>
+                      <label style={lbl}>Início</label>
+                      <input type="datetime-local" value={lotRangeStart} onChange={(e) => setLotRangeStart(e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={lbl}>Fim</label>
+                      <input type="datetime-local" value={lotRangeEnd} onChange={(e) => setLotRangeEnd(e.target.value)} />
+                    </div>
+                    {lotRangeStart && lotRangeEnd && (
+                      <span style={{ gridColumn: "1/-1", fontSize: 11, color: "var(--muted)" }}>
+                        Equivale a {computeLotDays()} dias de validade
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-            <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+
+            <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
               <button type="submit" style={{ fontSize: 12, padding: "6px 14px", width: "auto" }} disabled={isBusy}>Criar Lote</button>
               <button type="button" className="btn-ghost" style={{ fontSize: 12, padding: "6px 14px" }} onClick={() => setShowCreateLot(false)}>Cancelar</button>
             </div>
@@ -1207,3 +1289,10 @@ function OrgLotStat({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
+const lbl: React.CSSProperties = {
+  fontSize: 11,
+  color: "var(--muted)",
+  display: "block",
+  marginBottom: 3,
+};

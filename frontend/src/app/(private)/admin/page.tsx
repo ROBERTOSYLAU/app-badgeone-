@@ -114,7 +114,7 @@ export default function AdminDashboard() {
         <div>
           <h1 style={styles.pageTitle}>Visão Geral</h1>
           <p style={styles.pageSubtitle}>
-            Bem-vindo, <strong>{user?.name || "Admin"}</strong> · {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+            Bem-vindo, <strong>{user?.name || "Admin"}</strong> · {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })} · {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
         <button
