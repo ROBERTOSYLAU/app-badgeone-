@@ -247,8 +247,10 @@ export default function EmitPage() {
       contrato_endereco: "0x784d59aCe08F825Bf3e6bAbF659e60D58B51092b",
     };
 
-    let pdfDoc: InstanceType<typeof PDFDocument>;
-    let page: ReturnType<InstanceType<typeof PDFDocument>["getPages"]>[0];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let pdfDoc: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let page: any;
 
     // Caminho 1: lote tem imagem de fundo (art do certificado)
     if (lot?.imagem_url) {
