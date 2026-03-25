@@ -7,6 +7,13 @@ import { getToken } from "../../../../lib/auth";
 
 const RENDER_SCALE = 1.5;
 
+type LicencaStatus = {
+  ativa: boolean;
+  valid_until?: string;
+  dias_restantes?: number;
+  alerta?: boolean;
+};
+
 type BlocoPos = {
   x: number; // PDF pts from left
   y: number; // PDF pts from bottom (pdf-lib convention)
@@ -414,6 +421,9 @@ export default function IssuerSignPage() {
   const { user } = useAuth();
   const toast = useToast();
 
+  const [licenca, setLicenca] = useState<LicencaStatus | null>(null);
+  const [licencaLoading, setLicencaLoading] = useState(true);
+
   const rawBytesRef = useRef<Uint8Array | null>(null);
   const [hasPdf, setHasPdf] = useState(false);
   const [fileName, setFileName] = useState("");
@@ -441,6 +451,15 @@ export default function IssuerSignPage() {
   const [signing, setSigning] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [resultado, setResultado] = useState<ResultadoAssinatura | null>(null);
+
+  /* ── Verificar licença ───────────────────────────────────────── */
+  useEffect(() => {
+    fetch("/api/v1/licenca/status", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setLicenca(d as LicencaStatus))
+      .catch(() => setLicenca({ ativa: false }))
+      .finally(() => setLicencaLoading(false));
+  }, []);
 
   /* ── Load pdfjs from CDN ─────────────────────────────────────── */
   useEffect(() => {
@@ -838,7 +857,7 @@ export default function IssuerSignPage() {
       )}
 
       {/* Header */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 16 }}>
         <h1
           style={{
             fontSize: 20,
@@ -860,6 +879,66 @@ export default function IssuerSignPage() {
           registro na blockchain Polygon.
         </p>
       </div>
+
+      {/* Banner de licença */}
+      {!licencaLoading && (
+        licenca?.ativa ? (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: licenca.alerta ? "#fef9c3" : "#f0fdf4",
+            border: `1px solid ${licenca.alerta ? "#fcd34d" : "#86efac"}`,
+            borderRadius: 8,
+            padding: "8px 14px",
+            marginBottom: 16,
+            fontSize: 12,
+            color: licenca.alerta ? "#92400e" : "#166534",
+          }}>
+            <span>{licenca.alerta ? "⚠️" : "🟢"}</span>
+            <span>
+              Licença ativa até <strong>{new Date(licenca.valid_until!).toLocaleDateString("pt-BR")}</strong>
+              {licenca.alerta && ` · Vence em ${licenca.dias_restantes} dias`}
+            </span>
+            {licenca.alerta && (
+              <a href="/issuer/planos" style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#92400e", textDecoration: "none" }}>
+                Renovar →
+              </a>
+            )}
+          </div>
+        ) : (
+          <div style={{
+            background: "#fef2f2",
+            border: "1.5px solid #fca5a5",
+            borderRadius: 10,
+            padding: "16px 20px",
+            marginBottom: 16,
+          }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#991b1b", marginBottom: 6 }}>
+              🔴 Licença de assinatura inativa
+            </div>
+            <p style={{ fontSize: 13, color: "#b91c1c", margin: "0 0 12px" }}>
+              Sua organização não possui licença ativa para assinar documentos.
+              Adquira um lote Badge One Certificate e ganhe 1 ano grátis, ou renove sua licença anual.
+            </p>
+            <a
+              href="/issuer/planos"
+              style={{
+                display: "inline-block",
+                background: "#1A3A5C",
+                color: "#fff",
+                borderRadius: 7,
+                padding: "8px 18px",
+                fontSize: 13,
+                fontWeight: 700,
+                textDecoration: "none",
+              }}
+            >
+              Ver planos e ativar licença →
+            </a>
+          </div>
+        )
+      )}
 
       {/* Toolbar */}
       <div

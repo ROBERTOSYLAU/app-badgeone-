@@ -25,6 +25,7 @@ from app.models.assinatura_digital import AssinaturaDigital
 from app.models.transacao_blockchain import TransacaoBlockchain
 from app.integrations.blockchain import register_document
 from app.integrations.r2_storage import upload_file
+from app.api.v1.endpoints.licenca import _licenca_ativa
 
 router = APIRouter()
 
@@ -54,6 +55,17 @@ def sign_prepare(
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organização não encontrada")
+
+    # Validar licença de assinatura ativa
+    licenca = _licenca_ativa(db, org_id)
+    if not licenca:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "codigo": "licenca_inativa",
+                "mensagem": "Sua organização não possui licença de assinatura ativa. Adquira um lote Badge One Certificate ou renove sua licença anual.",
+            },
+        )
 
     public_id = uuid4().hex[:20]
 

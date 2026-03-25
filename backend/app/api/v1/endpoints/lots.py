@@ -11,6 +11,7 @@ from app.models.lot import BadgeLot
 from app.models.organization import Organization
 from app.models.lote_documento import LoteDocumento
 from app.core.audit import log_action
+from app.api.v1.endpoints.licenca import conceder_ou_estender_licenca
 
 router = APIRouter()
 
@@ -229,6 +230,17 @@ def create_lot(
 
         db.commit()
         db.refresh(lot)
+
+        # Conceder ou estender licença de assinatura por +1 ano (bonus ao criar lote)
+        try:
+            conceder_ou_estender_licenca(
+                db,
+                organization_id=lot.organization_id,
+                tipo="bonus",
+                lote_origem_id=lot.id,
+            )
+        except Exception:
+            pass  # falha silenciosa — não impede criação do lote
 
         return {
             "id": lot.id,

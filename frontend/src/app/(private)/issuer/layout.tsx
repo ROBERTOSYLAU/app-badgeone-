@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { RequireAuth, useAuth } from "../../../lib/auth-context";
+import { apiGet } from "../../../lib/api";
+import { getToken } from "../../../lib/auth";
+import { getSocket } from "../../../lib/socket";
 
 export default function IssuerLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -23,11 +26,21 @@ export default function IssuerLayout({ children }: { children: React.ReactNode }
   );
 }
 
+type LicencaStatus = {
+  ativa: boolean;
+  valid_until?: string;
+  dias_restantes?: number;
+  alerta?: boolean;
+};
+
 function IssuerSidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [dark, setDark] = useState(false);
+  const [avisosCount, setAvisosCount] = useState(0);
+  const [suporteCount, setSuporteCount] = useState(0);
+  const [licenca, setLicenca] = useState<LicencaStatus | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
@@ -36,6 +49,49 @@ function IssuerSidebar() {
       document.documentElement.setAttribute("data-theme", "dark");
     }
   }, []);
+
+  const fetchCounts = useCallback(async () => {
+    try {
+      const alertas = await apiGet("/api/v1/alertas") as Array<{ lido_emissor: boolean }>;
+      setAvisosCount(alertas.filter((a) => !a.lido_emissor).length);
+    } catch {}
+    try {
+      const tickets = await apiGet("/api/v1/suporte/tickets") as Array<{ nao_lidas: number }>;
+      setSuporteCount(tickets.reduce((s, t) => s + (t.nao_lidas || 0), 0));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
+
+  useEffect(() => {
+    apiGet("/api/v1/licenca/status")
+      .then((res) => setLicenca(res as LicencaStatus))
+      .catch(() => {});
+  }, []);
+
+  // Socket.io para atualizações em tempo real
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    const s = getSocket(token);
+
+    const handleNovaMensagem = () => {
+      setSuporteCount((c) => c + 1);
+    };
+    const handleTicketAtualizado = () => {
+      fetchCounts();
+    };
+
+    s.on("mensagem:nova", handleNovaMensagem);
+    s.on("ticket:atendendo", handleTicketAtualizado);
+
+    return () => {
+      s.off("mensagem:nova", handleNovaMensagem);
+      s.off("ticket:atendendo", handleTicketAtualizado);
+    };
+  }, [fetchCounts]);
 
   function toggleDark() {
     const next = !dark;
@@ -49,11 +105,20 @@ function IssuerSidebar() {
     }
   }
 
+  const licencaIcon = licenca == null ? "" : licenca.ativa
+    ? (licenca.alerta ? "🟡" : "🟢")
+    : "🔴";
+
   const navItems = [
     { href: "/issuer", label: "Visão Geral", icon: "📊" },
     { href: "/issuer/lots", label: "Meus Lotes", icon: "📦" },
+    { href: "/issuer/recipients", label: "Ganhadores", icon: "👥" },
     { href: "/issuer/emit", label: "Emitir Badge", icon: "🎖️" },
     { href: "/issuer/credentials", label: "Credenciais", icon: "📋" },
+    { href: "/issuer/sign", label: "Assinar Doc", icon: "✍️" },
+    { href: "/issuer/planos", label: "Planos", icon: licencaIcon || "💳" },
+    { href: "/issuer/avisos", label: "Avisos", icon: "🔔", badge: avisosCount },
+    { href: "/issuer/suporte", label: "Suporte", icon: "💬", badge: suporteCount },
     { href: "/issuer/perfil", label: "Meu Perfil", icon: "⚙️" },
   ];
 
@@ -108,7 +173,9 @@ function IssuerSidebar() {
       {/* Nav items */}
       <nav style={{ display: "grid", gap: 3 }}>
         {navItems.map((item) => {
-          const active = pathname === item.href;
+          const active = item.href === "/issuer"
+            ? pathname === "/issuer"
+            : pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link
               key={item.href}
@@ -125,10 +192,27 @@ function IssuerSidebar() {
                 border: `1px solid ${active ? "rgba(0,180,216,0.35)" : "transparent"}`,
                 fontWeight: active ? 600 : 400,
                 fontSize: 13,
+                position: "relative",
               }}
             >
               <span style={{ fontSize: 15 }}>{item.icon}</span>
-              <span>{item.label}</span>
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {item.badge != null && item.badge > 0 && (
+                <span
+                  style={{
+                    background: "#ef4444",
+                    color: "#fff",
+                    borderRadius: 9,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: "1px 5px",
+                    minWidth: 18,
+                    textAlign: "center",
+                  }}
+                >
+                  {item.badge > 99 ? "99+" : item.badge}
+                </span>
+              )}
             </Link>
           );
         })}

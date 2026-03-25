@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth, organizations, lots, users, credentials,
     organization_notes, audit_logs, lot_notes,
-    alertas, suporte, lote_documento, ganhadores, sign,
+    alertas, suporte, lote_documento, ganhadores, sign, licenca,
 )
 
 api_router = APIRouter()
@@ -19,3 +19,4 @@ api_router.include_router(suporte.router, prefix="/suporte", tags=["suporte"])
 api_router.include_router(lote_documento.router, prefix="/lote-documento", tags=["lote-documento"])
 api_router.include_router(ganhadores.router, prefix="/ganhadores", tags=["ganhadores"])
 api_router.include_router(sign.router, prefix="/sign", tags=["sign"])
+api_router.include_router(licenca.router, prefix="/licenca", tags=["licenca"])
