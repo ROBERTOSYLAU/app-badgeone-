@@ -21,6 +21,7 @@ type Lot = {
   start_date?: string | null;
   end_date?: string | null;
   created_at?: string | null;
+  imagem_url?: string | null;
 };
 
 type Org = { id: number; name: string; status: string };
@@ -70,6 +71,7 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
   const [tab, setTab] = useState<"info" | "notes">("info");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingImg, setUploadingImg] = useState(false);
 
   // Edit fields
   const [eTitle, setETitle] = useState("");
@@ -173,6 +175,39 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
     } finally { setSaving(false); }
   }
 
+  async function handleImageUpload(file: File) {
+    if (!lot) return;
+    setUploadingImg(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/v1/lots/${lot.id}/upload-imagem`, {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "Erro");
+      toast.success("Imagem do lote atualizada!");
+      await loadAll();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar imagem.");
+    } finally {
+      setUploadingImg(false);
+    }
+  }
+
+  async function handleRestore() {
+    const ok = await confirm("Restaurar este lote da lixeira?", { confirmText: "Restaurar" });
+    if (!ok) return;
+    try {
+      await apiPatch(`/api/v1/lots/${lotId}`, { status: "active" });
+      toast.success("Lote restaurado com sucesso.");
+      await loadAll();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erro ao restaurar lote.");
+    }
+  }
+
   async function handleDeleteNote(noteId: number) {
     const ok = await confirm("Remover esta anotação?", { danger: true, confirmText: "Remover" });
     if (!ok) return;
@@ -230,6 +265,32 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
 
         <div />
       </div>
+
+      {/* ── Banner de lixeira ── */}
+      {lot.status === "trashed" && (
+        <div style={{
+          background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 10,
+          padding: "14px 18px", marginBottom: 14,
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+        }}>
+          <div>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#92400e" }}>🗑️ Este lote está na Lixeira</span>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#b45309" }}>
+              Restaure o lote para torná-lo ativo novamente, ou exclua-o permanentemente na Lixeira.
+            </p>
+          </div>
+          <button
+            onClick={handleRestore}
+            style={{
+              background: "#f59e0b", border: "none", borderRadius: 7,
+              padding: "8px 16px", fontSize: 13, fontWeight: 600,
+              color: "#fff", cursor: "pointer", whiteSpace: "nowrap",
+            }}
+          >
+            Restaurar lote
+          </button>
+        </div>
+      )}
 
       {/* ── KPI Cards — todos clicáveis → abrem edição ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10, marginBottom: 14 }}>
@@ -323,6 +384,28 @@ export default function LotDetailPage({ params }: { params: { id: string } }) {
             <button onClick={openEdit} style={{ ...btnGhost, marginTop: 14, fontSize: 12 }}>
               ✏️ Editar Lote
             </button>
+
+            {/* Imagem de fundo do lote */}
+            <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>
+                Imagem de fundo do certificado
+              </div>
+              {lot.imagem_url ? (
+                <div style={{ marginBottom: 10 }}>
+                  <img src={lot.imagem_url} alt="Fundo do lote" style={{ maxWidth: "100%", maxHeight: 180, borderRadius: 8, border: "1px solid var(--line)", objectFit: "contain" }} />
+                </div>
+              ) : (
+                <div style={{ marginBottom: 10, padding: "16px", background: "var(--bg-soft)", borderRadius: 8, border: "1px dashed var(--line)", textAlign: "center", fontSize: 12, color: "var(--muted)" }}>
+                  Nenhuma imagem cadastrada
+                </div>
+              )}
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "var(--primary)", color: "#fff", borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: uploadingImg ? "not-allowed" : "pointer", opacity: uploadingImg ? 0.7 : 1 }}>
+                {uploadingImg ? "Enviando..." : lot.imagem_url ? "Trocar imagem" : "Upload de imagem"}
+                <input type="file" accept="image/*" style={{ display: "none" }} disabled={uploadingImg}
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }} />
+              </label>
+              <div style={{ marginTop: 6, fontSize: 11, color: "var(--muted)" }}>JPEG, PNG ou WebP. Esta imagem será o fundo do certificado.</div>
+            </div>
           </div>
         )}
 

@@ -1,5 +1,5 @@
 from uuid import uuid4
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
@@ -9,8 +9,11 @@ from app.core.db import get_db
 from app.models.lot import BadgeLot
 from app.models.organization import Organization
 from app.models.credential import Credential
+from app.models.ganhador import Ganhador
+from app.models.transacao_blockchain import TransacaoBlockchain
 from app.integrations.blockchain import mint_badge
 from app.integrations.storage import mock_pin_metadata
+from app.integrations.r2_storage import upload_file
 
 router = APIRouter()
 
@@ -18,10 +21,11 @@ router = APIRouter()
 class IssueCredentialRequest(BaseModel):
     organization_id: int
     lot_id: int
-    recipient_name: str
+    ganhador_id: int | None = None   # se informado, preenche automaticamente nome/cpf
+    recipient_name: str | None = None
     recipient_email: EmailStr | None = None
-    course_name: str  # mantém compatibilidade, exibido como "Certificação"
-    recipient_cpf: str | None = None  # opcional, LGPD
+    course_name: str = ""
+    recipient_cpf: str | None = None
 
 
 class CredentialUpdate(BaseModel):
@@ -31,6 +35,28 @@ class CredentialUpdate(BaseModel):
 @router.post("/issue")
 def issue_credential(payload: IssueCredentialRequest, db: Session = Depends(get_db), user: User = Depends(require_issuer_or_admin)):
     enforce_org_access(user, payload.organization_id)
+
+    # Resolve ganhador → preenche campos automaticamente
+    ganhador = None
+    if payload.ganhador_id:
+        ganhador = db.query(Ganhador).filter(Ganhador.id == payload.ganhador_id).first()
+        if not ganhador:
+            raise HTTPException(status_code=404, detail="Ganhador não encontrado")
+        if not ganhador.ativo:
+            raise HTTPException(status_code=400, detail="Ganhador inativo")
+        if ganhador.tipo == "PF":
+            payload.recipient_name = ganhador.nome or payload.recipient_name
+            payload.recipient_cpf = ganhador.cpf or payload.recipient_cpf
+        else:
+            payload.recipient_name = ganhador.razao_social or payload.recipient_name
+            payload.recipient_cpf = ganhador.cnpj or payload.recipient_cpf
+        if not payload.recipient_email and ganhador.email:
+            payload.recipient_email = ganhador.email  # type: ignore
+
+    if not payload.recipient_name:
+        raise HTTPException(status_code=400, detail="Nome do destinatário é obrigatório")
+    if not payload.course_name:
+        payload.course_name = "Certificado Badge One"
 
     org = db.query(Organization).filter(Organization.id == payload.organization_id).first()
     if not org:
@@ -82,10 +108,23 @@ def issue_credential(payload: IssueCredentialRequest, db: Session = Depends(get_
         credential.issued_by_user_id = user.id
     if hasattr(credential, "recipient_cpf") and payload.recipient_cpf:
         credential.recipient_cpf = payload.recipient_cpf
+    if hasattr(credential, "ganhador_id") and payload.ganhador_id:
+        credential.ganhador_id = payload.ganhador_id
     db.add(credential)
 
     lot.issued = lot.issued + 1
     db.add(lot)
+
+    # Salvar transação blockchain
+    if chain.get("tx_hash") and chain.get("mode") != "mock_fallback":
+        tx_rec = TransacaoBlockchain(
+            tx_hash=chain["tx_hash"],
+            block_number=chain.get("block_number"),
+            gas_used=str(chain.get("gas_used", "")),
+            tipo="badge_mint",
+            referencia_id=public_id,
+        )
+        db.add(tx_rec)
 
     db.commit()
     db.refresh(credential)
@@ -95,6 +134,8 @@ def issue_credential(payload: IssueCredentialRequest, db: Session = Depends(get_
     return {
         "id": credential.id,
         "public_id": credential.public_id,
+        "recipient_name": credential.recipient_name,
+        "course_name": credential.course_name,
         "status": credential.status,
         "metadata_uri": credential.metadata_uri,
         "tx_hash": credential.tx_hash,
@@ -104,6 +145,30 @@ def issue_credential(payload: IssueCredentialRequest, db: Session = Depends(get_
         "mint_mode": chain.get("mode", "live"),
         "polygonscan_url": polygonscan_url,
     }
+
+
+@router.post("/{public_id}/upload-certificate")
+async def upload_certificate(
+    public_id: str,
+    pdf: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_issuer_or_admin),
+):
+    """Salva o PDF do certificado gerado no R2 e vincula ao badge."""
+    cred = db.query(Credential).filter(Credential.public_id == public_id).first()
+    if not cred:
+        raise HTTPException(status_code=404, detail="Credencial não encontrada")
+    enforce_org_access(user, cred.organization_id)
+
+    pdf_bytes = await pdf.read()
+    r2_key = f"certificates/{public_id}.pdf"
+    pdf_url = upload_file(pdf_bytes, r2_key, "application/pdf")
+
+    cred.certificate_url = pdf_url
+    db.commit()
+    db.refresh(cred)
+
+    return {"certificate_url": pdf_url, "public_id": public_id}
 
 
 @router.patch("/{credential_id}")
@@ -132,6 +197,9 @@ def verify_credential(public_id: str, db: Session = Depends(get_db)):
     if not c:
         raise HTTPException(status_code=404, detail="Credencial não encontrada")
 
+    lot = db.query(BadgeLot).filter(BadgeLot.id == c.lot_id).first() if c.lot_id else None
+    org = db.query(Organization).filter(Organization.id == c.organization_id).first() if c.organization_id else None
+
     return {
         "public_id": c.public_id,
         "recipient_name": c.recipient_name,
@@ -140,6 +208,11 @@ def verify_credential(public_id: str, db: Session = Depends(get_db)):
         "metadata_uri": c.metadata_uri,
         "tx_hash": c.tx_hash,
         "token_id": c.token_id,
+        "certificate_url": getattr(c, "certificate_url", None),
+        "issued_at": c.created_at.isoformat() if c.created_at else None,
+        "lot_title": (lot.display_title or lot.title) if lot else None,
+        "org_nome": org.name if org else None,
+        "org_cnpj": getattr(org, "document", None) if org else None,
     }
 
 
@@ -187,6 +260,27 @@ def list_credentials(
     elif organization_id is not None:
         q = q.filter(Credential.organization_id == organization_id)
     data = q.order_by(Credential.id.desc()).limit(300).all()
+
+    lot_ids = list({x.lot_id for x in data if x.lot_id})
+    org_ids = list({x.organization_id for x in data if x.organization_id})
+    ganhador_ids = list({getattr(x, "ganhador_id", None) for x in data if getattr(x, "ganhador_id", None)})
+    lots_map = {l.id: l for l in db.query(BadgeLot).filter(BadgeLot.id.in_(lot_ids)).all()} if lot_ids else {}
+    orgs_map = {o.id: o for o in db.query(Organization).filter(Organization.id.in_(org_ids)).all()} if org_ids else {}
+    ganhadores_map = {g.id: g for g in db.query(Ganhador).filter(Ganhador.id.in_(ganhador_ids)).all()} if ganhador_ids else {}
+
+    def _ganhador_info(x):
+        gid = getattr(x, "ganhador_id", None)
+        if not gid or gid not in ganhadores_map:
+            return {}
+        g = ganhadores_map[gid]
+        return {
+            "ganhador_id": g.id,
+            "ganhador_tipo": g.tipo,
+            "ganhador_nome": g.nome if g.tipo == "PF" else g.razao_social,
+            "ganhador_cpf_cnpj": g.cpf if g.tipo == "PF" else g.cnpj,
+            "ganhador_wallet": g.wallet_address,
+        }
+
     return [
         {
             "id": x.id,
@@ -195,12 +289,18 @@ def list_credentials(
             "public_id": x.public_id,
             "recipient_name": x.recipient_name,
             "recipient_email": x.recipient_email,
+            "recipient_cpf": getattr(x, "recipient_cpf", None),
             "course_name": x.course_name,
             "status": x.status,
             "tx_hash": x.tx_hash,
             "token_id": x.token_id,
             "created_at": x.created_at.isoformat() if x.created_at else None,
             "issued_by_user_id": getattr(x, "issued_by_user_id", None) if hasattr(x, "issued_by_user_id") else None,
+            "certificate_url": getattr(x, "certificate_url", None),
+            "lot_title": lots_map[x.lot_id].display_title or lots_map[x.lot_id].title if x.lot_id and x.lot_id in lots_map else None,
+            "org_nome": orgs_map[x.organization_id].name if x.organization_id and x.organization_id in orgs_map else None,
+            "org_cnpj": orgs_map[x.organization_id].document if x.organization_id and x.organization_id in orgs_map else None,
+            **_ganhador_info(x),
         }
         for x in data
     ]

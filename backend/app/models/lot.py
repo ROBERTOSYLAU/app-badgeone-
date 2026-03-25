@@ -19,3 +19,4 @@ class BadgeLot(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     original_title = Column(String(180), nullable=True)
     display_title = Column(String(180), nullable=True)
+    imagem_url = Column(String(500), nullable=True)

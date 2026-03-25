@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiGet } from "../../../../lib/api";
 import { useAuth } from "../../../../lib/auth-context";
 import { useToast } from "../../../../lib/toast-context";
@@ -16,6 +17,8 @@ type Lot = {
   remaining: number;
   status: string;
   created_at: string | null;
+  tem_documento?: boolean;
+  imagem_url?: string | null;
 };
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -31,6 +34,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function IssuerLotsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const toast = useToast();
   const confirm = useConfirm();
   const [lots, setLots] = useState<Lot[]>([]);
@@ -138,13 +142,24 @@ export default function IssuerLotsPage() {
                   background: "var(--card-bg, #fff)",
                   border: "1px solid var(--border, #e5e7eb)",
                   borderRadius: 10,
-                  padding: "16px 20px",
+                  overflow: "hidden",
                   transition: "box-shadow 0.15s",
                 }}
               >
+                {lot.imagem_url && (
+                  <div style={{ height: 80, overflow: "hidden", background: "#f3f4f6" }}>
+                    <img src={lot.imagem_url} alt="Fundo do lote" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.85 }} />
+                  </div>
+                )}
+                <div style={{ padding: "16px 20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                   {/* Left: nome + root */}
                   <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ marginBottom: 6 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: lot.tem_documento ? "rgba(34,197,94,0.1)" : "rgba(107,114,128,0.1)", color: lot.tem_documento ? "#16a34a" : "#6b7280", border: `1px solid ${lot.tem_documento ? "rgba(34,197,94,0.3)" : "rgba(107,114,128,0.3)"}` }}>
+                        {lot.tem_documento ? "Com modelo" : "Sem modelo"}
+                      </span>
+                    </div>
                     {isEditing ? (
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <input
@@ -215,6 +230,12 @@ export default function IssuerLotsPage() {
                       {STATUS_LABELS[lot.status] || lot.status}
                     </span>
 
+                    <button
+                      onClick={() => router.push(`/issuer/lots/${lot.id}`)}
+                      style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, cursor: "pointer", background: "transparent", border: "1px solid #9ca3af", color: "#6b7280" }}
+                    >
+                      Documento
+                    </button>
                     {lot.status !== "revoked" && lot.status !== "finished" && (
                       <div style={{ display: "flex", gap: 6 }}>
                         {lot.status === "active" && (
@@ -231,7 +252,7 @@ export default function IssuerLotsPage() {
                     )}
                   </div>
                 </div>
-
+                </div>{/* padding wrapper */}
               </div>
             );
           })}

@@ -20,6 +20,8 @@ class Credential(Base):
 
     issued_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     recipient_cpf = Column(String(14), nullable=True)
+    ganhador_id = Column(Integer, ForeignKey("ganhadores.id"), nullable=True)
     status = Column(String(20), nullable=False, default="valid")
     rectification_note = Column(String(500), nullable=True)
+    certificate_url = Column(Text, nullable=True)          # URL do PDF no R2
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

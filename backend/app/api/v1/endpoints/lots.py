@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -9,6 +9,7 @@ from app.models.user import User
 from app.core.db import get_db
 from app.models.lot import BadgeLot
 from app.models.organization import Organization
+from app.models.lote_documento import LoteDocumento
 from app.core.audit import log_action
 
 router = APIRouter()
@@ -138,6 +139,11 @@ def ensure_lot_columns(db: Session):
                 text(f"ALTER TABLE {table_name} ADD COLUMN end_date TIMESTAMP WITH TIME ZONE")
             )
 
+        if "imagem_url" not in existing_columns:
+            db.execute(
+                text(f"ALTER TABLE {table_name} ADD COLUMN imagem_url VARCHAR(500)")
+            )
+
         db.commit()
 
     except Exception as e:
@@ -237,6 +243,7 @@ def create_lot(
             "end_date": _safe_dt(lot, "end_date"),
             "status": lot.status,
             "created_at": _safe_created_at(lot),
+            "imagem_url": getattr(lot, "imagem_url", None),
         }
 
     except HTTPException:
@@ -324,6 +331,7 @@ def update_lot(
         "created_at": _safe_created_at(lot),
         "original_title": getattr(lot, "original_title", None),
         "display_title": getattr(lot, "display_title", None),
+        "imagem_url": getattr(lot, "imagem_url", None),
     }
 
 
@@ -482,6 +490,65 @@ def set_lot_status(
     return {"id": lot.id, "status": lot.status, "remaining": _remaining(lot)}
 
 
+@router.delete("/{lot_id}")
+def delete_lot(
+    lot_id: int,
+    force: bool = Query(False),
+    db: Session = Depends(get_db),
+    _=Depends(require_admin),
+):
+    lot = db.query(BadgeLot).filter(BadgeLot.id == lot_id).first()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lote não encontrado")
+
+    if not force:
+        lot.status = "trashed"
+        log_action(db, "lot", lot.id, "trash", f"Lote movido para lixeira")
+        db.commit()
+        return {"ok": True, "mode": "trashed", "id": lot_id}
+
+    try:
+        log_action(db, "lot", lot.id, "delete_permanent", f"Lote excluído permanentemente")
+        db.delete(lot)
+        db.commit()
+        return {"ok": True, "mode": "deleted", "id": lot_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Erro ao excluir lote: {str(e)}")
+
+
+@router.post("/{lot_id}/upload-imagem")
+async def upload_lot_image(
+    lot_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_issuer_or_admin),
+):
+    from app.integrations.r2_storage import upload_file
+
+    lot = db.query(BadgeLot).filter(BadgeLot.id == lot_id).first()
+    if not lot:
+        raise HTTPException(status_code=404, detail="Lote não encontrado")
+    if user.role == "issuer" and lot.organization_id != user.organization_id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
+    allowed_types = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Formato inválido. Use JPEG, PNG, GIF ou WebP.")
+
+    content = await file.read()
+    ext = (file.filename or "img").rsplit(".", 1)[-1].lower() or "jpg"
+    key = f"lot-images/{lot_id}.{ext}"
+    url = upload_file(content, key, file.content_type or "image/jpeg")
+
+    if hasattr(lot, "imagem_url"):
+        lot.imagem_url = url
+    log_action(db, "lot", lot.id, "upload_imagem", f"Imagem enviada para {url}")
+    db.commit()
+    db.refresh(lot)
+    return {"imagem_url": url}
+
+
 @router.get("")
 def list_lots(
     db: Session = Depends(get_db),
@@ -501,6 +568,13 @@ def list_lots(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao listar lotes: {str(e)}")
 
+    # Check which lots have a documento model
+    lot_ids = [x.id for x in data]
+    doc_lot_ids: set[int] = set()
+    if lot_ids:
+        docs = db.query(LoteDocumento.lote_id).filter(LoteDocumento.lote_id.in_(lot_ids)).all()
+        doc_lot_ids = {row.lote_id for row in docs}
+
     return [
         {
             "id": x.id,
@@ -517,6 +591,8 @@ def list_lots(
             "created_at": _safe_created_at(x),
             "original_title": getattr(x, "original_title", None),
             "display_title": getattr(x, "display_title", None),
+            "tem_documento": x.id in doc_lot_ids,
+            "imagem_url": getattr(x, "imagem_url", None),
         }
         for x in data
     ]
