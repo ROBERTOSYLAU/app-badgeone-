@@ -1,6 +1,7 @@
 # Plano: Sistema de Licenças e Planos — BadgeOne
 > Criado em: 25 de marco de 2026 as 19:30 (Horario de Brasilia)
-> Status: EM ANDAMENTO
+> Atualizado em: 25 de marco de 2026 as 19:50 (Horario de Brasilia)
+> Status: CONCLUIDO
 
 ---
 
@@ -153,12 +154,12 @@ GET  /admin/licencas        → lista todas licenças (admin only)
 
 ## CHECKLIST DE EXECUÇÃO
 
-- [ ] 1. Criar model LicencaAssinatura
-- [ ] 2. Criar endpoint GET/POST /licenca
-- [ ] 3. Modificar lots.py — conceder licença ao criar lote
-- [ ] 4. Modificar sign.py — validar licença
-- [ ] 5. Registrar router
-- [ ] 6. Criar página /issuer/planos
-- [ ] 7. Atualizar /issuer/sign — banner de licença
-- [ ] 8. Atualizar layout issuer — indicador no menu
-- [ ] 9. Commit + push
+- [x] 1. Criar model LicencaAssinatura
+- [x] 2. Criar endpoint GET/POST /licenca (status, renovar, admin/todas)
+- [x] 3. Modificar lots.py — conceder/estender licença ao criar lote (+1 ano bonus)
+- [x] 4. Modificar sign.py — validar licença ativa antes de assinar (403 licenca_inativa)
+- [x] 5. Registrar router (/licenca)
+- [x] 6. Criar página /issuer/planos (status licença + créditos dos lotes + botão renovar)
+- [x] 7. Atualizar /issuer/sign — banner verde/amarelo/vermelho com link para planos
+- [x] 8. Atualizar layout issuer — indicador 🟢/🟡/🔴 no menu + item Planos
+- [x] 9. Commit + push (commit 88b670a)
