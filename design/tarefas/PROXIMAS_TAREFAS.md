@@ -1,5 +1,5 @@
 # Proximas Tarefas — BadgeOne
-> Atualizado em: 25 de marco de 2026 as 19:59
+> Atualizado em: 25 de marco de 2026 as 17:00 (Horario de Brasilia)
 
 ---
 
