@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiGet, apiPost } from "../../../../lib/api";
+import { apiGet } from "../../../../lib/api";
 import { useToast } from "../../../../lib/toast-context";
 
 type LicencaStatus = {
@@ -32,7 +32,6 @@ export default function PlanosPage() {
   const toast = useToast();
   const [licenca, setLicenca] = useState<LicencaStatus | null>(null);
   const [lots, setLots] = useState<Lot[]>([]);
-  const [renovando, setRenovando] = useState(false);
   const [loading, setLoading] = useState(true);
 
   async function carregar() {
@@ -54,18 +53,6 @@ export default function PlanosPage() {
 
   useEffect(() => { carregar(); }, []);
 
-  async function renovarLicenca() {
-    setRenovando(true);
-    try {
-      const res = await apiPost("/api/v1/licenca/renovar", {}) as { valid_until: string; dias_restantes: number };
-      toast.success(`Licença renovada até ${formatDate(res.valid_until)}`);
-      carregar();
-    } catch {
-      toast.error("Erro ao renovar licença");
-    } finally {
-      setRenovando(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -144,25 +131,19 @@ export default function PlanosPage() {
             )}
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 180 }}>
-            <button
-              onClick={renovarLicenca}
-              disabled={renovando}
-              style={{
-                padding: "10px 20px",
-                background: renovando ? "#e5e7eb" : "#1A3A5C",
-                color: renovando ? "#9ca3af" : "#fff",
-                border: "none",
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: renovando ? "not-allowed" : "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {renovando ? "Renovando..." : licAtiva ? "🔄 Renovar por +1 ano" : "✅ Ativar licença"}
-            </button>
-            <div style={{ fontSize: 11, color: "#64748b", textAlign: "center" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 180, alignItems: "center", justifyContent: "center" }}>
+            <div style={{
+              padding: "10px 16px",
+              background: "rgba(26,58,92,0.06)",
+              border: "1px solid rgba(26,58,92,0.15)",
+              borderRadius: 8,
+              fontSize: 12,
+              color: "#475569",
+              textAlign: "center",
+            }}>
+              🔒 Ativação pelo administrador
+            </div>
+            <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "center" }}>
               R$ 50,00 / ano · assinaturas ilimitadas
             </div>
           </div>
@@ -178,7 +159,7 @@ export default function PlanosPage() {
             fontSize: 12,
             color: "#92400e",
           }}>
-            ⚠️ Sua licença vence em {licenca?.dias_restantes} dias. Renove agora para não perder o acesso ao assinador.
+            ⚠️ Sua licença vence em {licenca?.dias_restantes} dias. Entre em contato com o administrador para renovar.
           </div>
         )}
       </div>

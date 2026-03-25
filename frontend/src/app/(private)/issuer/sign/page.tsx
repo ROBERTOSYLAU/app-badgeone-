@@ -9,9 +9,11 @@ const RENDER_SCALE = 1.5;
 
 type LicencaStatus = {
   ativa: boolean;
+  motivo?: string;
   valid_until?: string;
   dias_restantes?: number;
   alerta?: boolean;
+  saldo_badges?: number;
 };
 
 type BlocoPos = {
@@ -423,6 +425,7 @@ export default function IssuerSignPage() {
 
   const [licenca, setLicenca] = useState<LicencaStatus | null>(null);
   const [licencaLoading, setLicencaLoading] = useState(true);
+  const [confirmarBadge, setConfirmarBadge] = useState<{ saldo: number; dadosPendentes: DadosAssinatura } | null>(null);
 
   const rawBytesRef = useRef<Uint8Array | null>(null);
   const [hasPdf, setHasPdf] = useState(false);
@@ -645,13 +648,14 @@ export default function IssuerSignPage() {
   }
 
   /* ── Confirmar assinatura completa ───────────────────────────── */
-  async function handleConfirmar(dados: DadosAssinatura) {
+  async function handleConfirmar(dados: DadosAssinatura, usarBadge = false) {
     const bytes = rawBytesRef.current;
     const bp = blocoPos;
     const ps = pageSizeRef.current;
     if (!bytes || !bp || !ps) return;
 
     setFormOpen(false);
+    setConfirmarBadge(null);
     setSigning(true);
 
     try {
@@ -673,12 +677,29 @@ export default function IssuerSignPage() {
           finalidade: dados.finalidade,
           partes_envolvidas: dados.partesEnvolvidas,
           descricao: dados.descricao,
+          usar_badge: usarBadge,
         }),
       });
 
       if (!prepareRes.ok) {
         const err = await prepareRes.json();
-        throw new Error(err.detail || "Erro ao registrar na blockchain");
+        const detail = err.detail || {};
+
+        // 402 — tem badges disponíveis, perguntar se quer usar
+        if (prepareRes.status === 402 && detail.codigo === "usar_badge_disponivel") {
+          setSigning(false);
+          setConfirmarBadge({ saldo: detail.saldo_badges, dadosPendentes: dados });
+          return;
+        }
+
+        // 403 — sem licença e sem badges
+        if (prepareRes.status === 403 && detail.codigo === "licenca_inativa") {
+          setSigning(false);
+          toast.error(detail.mensagem || "Sua assinatura não está ativa. Entre em contato com o administrador.");
+          return;
+        }
+
+        throw new Error(detail.mensagem || detail || "Erro ao registrar na blockchain");
       }
       const prepareData = await prepareRes.json();
       const {
@@ -856,6 +877,41 @@ export default function IssuerSignPage() {
         />
       )}
 
+      {/* Modal: confirmar uso de badge */}
+      {confirmarBadge && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "var(--card-bg,#fff)", borderRadius: 12, padding: "28px 28px 24px", width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+            <div style={{ fontSize: 36, textAlign: "center", marginBottom: 12 }}>🎖️</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary,#111)", margin: "0 0 8px", textAlign: "center" }}>
+              Usar 1 badge para assinar?
+            </h3>
+            <p style={{ fontSize: 13, color: "var(--text-secondary,#555)", margin: "0 0 6px", textAlign: "center" }}>
+              Você não possui licença de assinatura ativa.
+            </p>
+            <p style={{ fontSize: 13, color: "var(--text-secondary,#555)", margin: "0 0 20px", textAlign: "center" }}>
+              Você tem <strong>{confirmarBadge.saldo} badge(s)</strong> disponível(is). Deseja consumir 1 badge para assinar este documento?
+            </p>
+            <div style={{ background: "#fef9c3", border: "1px solid #fcd34d", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: "#92400e", marginBottom: 20 }}>
+              💡 Dica: renovar sua licença anual por R$50,00 é mais econômico do que usar badges individuais (R$5,00/unidade).
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setConfirmarBadge(null)}
+                style={{ flex: 1, padding: "10px", borderRadius: 7, fontSize: 13, cursor: "pointer", background: "var(--bg-soft,#f9fafb)", border: "1px solid var(--border,#d1d5db)", color: "var(--text-primary,#111)" }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleConfirmar(confirmarBadge.dadosPendentes, true)}
+                style={{ flex: 1, padding: "10px", borderRadius: 7, fontSize: 13, fontWeight: 700, cursor: "pointer", background: "#1A3A5C", color: "#fff", border: "none" }}
+              >
+                Usar 1 badge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ marginBottom: 16 }}>
         <h1
@@ -898,13 +954,8 @@ export default function IssuerSignPage() {
             <span>{licenca.alerta ? "⚠️" : "🟢"}</span>
             <span>
               Licença ativa até <strong>{new Date(licenca.valid_until!).toLocaleDateString("pt-BR")}</strong>
-              {licenca.alerta && ` · Vence em ${licenca.dias_restantes} dias`}
+              {licenca.alerta && ` · Vence em ${licenca.dias_restantes} dias — contate o administrador para renovar`}
             </span>
-            {licenca.alerta && (
-              <a href="/issuer/planos" style={{ marginLeft: "auto", fontSize: 12, fontWeight: 700, color: "#92400e", textDecoration: "none" }}>
-                Renovar →
-              </a>
-            )}
           </div>
         ) : (
           <div style={{
@@ -915,27 +966,13 @@ export default function IssuerSignPage() {
             marginBottom: 16,
           }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "#991b1b", marginBottom: 6 }}>
-              🔴 Licença de assinatura inativa
+              🔴 Sua assinatura não está ativa
             </div>
-            <p style={{ fontSize: 13, color: "#b91c1c", margin: "0 0 12px" }}>
-              Sua organização não possui licença ativa para assinar documentos.
-              Adquira um lote Badge One Certificate e ganhe 1 ano grátis, ou renove sua licença anual.
+            <p style={{ fontSize: 13, color: "#b91c1c", margin: 0 }}>
+              {licenca?.saldo_badges && licenca.saldo_badges > 0
+                ? `Você tem ${licenca.saldo_badges} badge(s) disponível(is). Ao assinar, será perguntado se deseja usar 1 badge.`
+                : "Entre em contato com o administrador para ativar sua licença de assinatura."}
             </p>
-            <a
-              href="/issuer/planos"
-              style={{
-                display: "inline-block",
-                background: "#1A3A5C",
-                color: "#fff",
-                borderRadius: 7,
-                padding: "8px 18px",
-                fontSize: 13,
-                fontWeight: 700,
-                textDecoration: "none",
-              }}
-            >
-              Ver planos e ativar licença →
-            </a>
           </div>
         )
       )}

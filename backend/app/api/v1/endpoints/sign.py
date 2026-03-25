@@ -21,11 +21,12 @@ from app.core.config import settings
 from app.core.db import get_db
 from app.models.user import User
 from app.models.organization import Organization
+from app.models.lot import BadgeLot
 from app.models.assinatura_digital import AssinaturaDigital
 from app.models.transacao_blockchain import TransacaoBlockchain
 from app.integrations.blockchain import register_document
 from app.integrations.r2_storage import upload_file
-from app.api.v1.endpoints.licenca import _licenca_ativa
+from app.api.v1.endpoints.licenca import _licenca_ativa, _saldo_badges
 
 router = APIRouter()
 
@@ -36,6 +37,7 @@ class PrepareRequest(BaseModel):
     finalidade: str
     partes_envolvidas: str
     descricao: str = ""
+    usar_badge: bool = False   # true = consumir 1 badge do lote ao invés da licença
 
 
 @router.post("/prepare")
@@ -58,14 +60,53 @@ def sign_prepare(
 
     # Validar licença de assinatura ativa
     licenca = _licenca_ativa(db, org_id)
+    saldo = _saldo_badges(db, org_id)
+
     if not licenca:
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "codigo": "licenca_inativa",
-                "mensagem": "Sua organização não possui licença de assinatura ativa. Adquira um lote Badge One Certificate ou renove sua licença anual.",
-            },
+        if saldo > 0 and not payload.usar_badge:
+            # Tem badges mas não escolheu usar — pede confirmação ao frontend
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "codigo": "usar_badge_disponivel",
+                    "mensagem": f"Você não possui licença ativa, mas tem {saldo} badge(s) disponível(is). Deseja usar 1 badge para assinar este documento?",
+                    "saldo_badges": saldo,
+                },
+            )
+        if not licenca and (saldo == 0 or not payload.usar_badge):
+            if saldo == 0:
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "codigo": "licenca_inativa",
+                        "mensagem": "Sua assinatura não está ativa. Entre em contato com o administrador.",
+                    },
+                )
+
+    # Se usar_badge=True, consumir 1 badge do lote ativo
+    lote_consumido = None
+    if payload.usar_badge and not licenca:
+        lote_ativo = (
+            db.query(BadgeLot)
+            .filter(
+                BadgeLot.organization_id == org_id,
+                BadgeLot.status == "active",
+                (BadgeLot.total_badges - BadgeLot.issued) > 0,
+            )
+            .order_by(BadgeLot.id.asc())
+            .first()
         )
+        if not lote_ativo:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "codigo": "licenca_inativa",
+                    "mensagem": "Sua assinatura não está ativa. Entre em contato com o administrador.",
+                },
+            )
+        lote_ativo.issued = lote_ativo.issued + 1
+        db.add(lote_ativo)
+        lote_consumido = lote_ativo.id
 
     public_id = uuid4().hex[:20]
 
@@ -137,6 +178,8 @@ def sign_prepare(
         "polygonscan_url": polygonscan_url,
         "network": chain.get("network", "polygon"),
         "mint_mode": chain.get("mode", "live"),
+        "lote_consumido": lote_consumido,
+        "badge_usado": lote_consumido is not None,
     }
 
 
